@@ -15,6 +15,7 @@ const db = connectDatabase();
 const app = await buildApp({
   db,
   recordingsDir: join(root, 'recordings'),
+  webDir: join(root, 'web/dist'),
   ...speech,
   setHumidifierPower: power => setHumidifierPower(power, shutdown.signal),
   synthesizeReply: (text, output) => synthesizeReply(text, output, shutdown.signal),

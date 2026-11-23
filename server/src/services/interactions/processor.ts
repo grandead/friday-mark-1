@@ -10,6 +10,8 @@ export type ProcessingOptions = {
   log?: (message: string) => void;
 };
 
+export type SavedReply = { id: string; deviceId: string; userId: string };
+
 export type RecognitionEvent = { type: 'transcript'; text: string } | { type: 'transcription_error'; message: string };
 type Notify = (event: RecognitionEvent) => void;
 
@@ -18,7 +20,10 @@ export class InteractionProcessor {
   private jobs = 0;
   private readonly log: (message: string) => void;
 
-  constructor(private readonly options: ProcessingOptions) {
+  constructor(
+    private readonly options: ProcessingOptions,
+    private readonly replyAudioSaved: (reply: SavedReply) => Promise<void>,
+  ) {
     this.log = options.log ?? console.log;
   }
 
@@ -51,6 +56,7 @@ export class InteractionProcessor {
     this.log(`\nТекст: ${text || '(речь не распознана)'}\n`);
     notify({ type: 'transcript', text });
 
+    let outputAudioKey: string | undefined;
     const power = humidifierCommand(text);
     if (power && setHumidifierPower) {
       const action = await db.interactionAction.create({ data: {
@@ -82,11 +88,15 @@ export class InteractionProcessor {
           this.log(`Ошибка синтеза речи: ${error}`);
           return;
         }
-        await db.interaction.update({ where, data: { outputAudioKey: basename(output) } });
+        outputAudioKey = basename(output);
         this.log(`Голос Пятницы: ${output}`);
       }
     }
-    await db.interaction.update({ where, data: { status: 'complete', finishedAt: new Date() } });
+    const saved = await db.interaction.update({
+      where, data: { status: 'complete', finishedAt: new Date(), outputAudioKey },
+      select: { id: true, deviceId: true, userId: true },
+    });
+    if (outputAudioKey) await this.replyAudioSaved(saved);
   }
 
   private fail(id: string, error: unknown) {

@@ -15,12 +15,14 @@
     "voice": "node scripts/synthesize-reply.mjs",
     "send:wav": "tsx scripts/send-wav.ts",
     "test:whisper": "tsx scripts/smoke-whisper.ts",
-    "prestart": "npm run db:deploy",
-    "predev": "npm run db:deploy",
+    "prestart": "npm run db:deploy && npm run web:build",
+    "predev": "npm run db:deploy && npm run web:build",
     "postinstall": "prisma generate",
-    "db:deploy": "prisma migrate deploy"
+    "db:deploy": "prisma migrate deploy",
+    "web:build": "npm run build --workspace friday-web"
   },
   "dependencies": {
+    "@fastify/static": "^10.1.12",
     "@fastify/websocket": "^11.2.0",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
@@ -42,5 +44,8 @@
     "@prisma/config": {
       "effect": "3.22.5"
     }
-  }
+  },
+  "workspaces": [
+    "web"
+  ]
 }

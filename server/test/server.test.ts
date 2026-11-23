@@ -3,7 +3,7 @@ import { version, v7 } from 'uuid';
 import { deviceId, userId } from '../src/config/identity.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { copyFile, mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
@@ -184,4 +184,129 @@ test('HTTP health tracks the same in-flight transcription as the audio socket', 
   const row = await db.interaction.findFirstOrThrow();
   assert.equal(row.status, 'failed');
   assert.match(row.inputAudioKey, /\.wav$/);
+});
+
+test('journal lists a device recording and serves its WAV by id with byte ranges', async t => {
+  const { app, ws, messages, until, db } = await fixture(t);
+  ws.send(JSON.stringify(start));
+  ws.send(Buffer.alloc(1024));
+  ws.send(JSON.stringify({ type: 'end', samples: 512 }));
+  await until(async () => await db.interaction.count({ where: { status: 'complete' } }) === 1);
+
+  const devices = (await app.inject('/api/devices')).json();
+  assert.equal(devices[0].id, deviceId);
+  const journal = await app.inject('/api/interactions?deviceId=' + deviceId);
+  assert.equal(journal.statusCode, 200);
+  const { items: [item], total } = journal.json();
+  assert.equal(total, 1);
+  const otherUser = await db.user.create({ data: { displayName: 'Test listener' } });
+  const users = (await app.inject('/api/users')).json();
+  assert.ok(users.some((user: { id: string }) => user.id === otherUser.id));
+  const filtered = (await app.inject(`/api/interactions?deviceId=${deviceId}&userId=${otherUser.id}`)).json();
+  assert.equal(filtered.total, 0);
+  assert.deepEqual(filtered.items, []);
+  assert.equal(item.id, messages.find(m => m.type === 'started').id);
+  assert.equal(item.transcript, 'Привет');
+  assert.equal(item.outputAudio, null);
+  assert.equal(item.inputAudioKey, undefined);
+  const audio = await app.inject({ url: item.inputAudio, headers: { range: 'bytes=0-43' } });
+  assert.equal(audio.statusCode, 206);
+  assert.equal(audio.rawPayload.length, 44);
+  assert.equal(audio.rawPayload.toString('ascii', 0, 4), 'RIFF');
+  assert.equal((await app.inject(`/api/interactions/${item.id}/audio/output`)).statusCode, 404);
+  assert.equal((await app.inject('/api/interactions?deviceId=invalid')).statusCode, 400);
+});
+
+test('journal emits only after reply audio is saved and the interaction is complete', async t => {
+  const phrases = ['Привет', 'Включи увлажнитель', 'Выключи увлажнитель'];
+  const { db, ws, until, messages, dir } = await fixture(t, {
+    transcribe: async () => phrases.shift()!,
+    setHumidifierPower: async power => power,
+    synthesizeReply: async (reply, output) => {
+      if (reply === 'on') throw new Error('Synthesis failed');
+      await copyFile(output.replace(/\.reply\.wav$/, '.wav'), output);
+    },
+  });
+  const url = new URL('/api/journal/events', ws.url.replace('ws:', 'http:'));
+  const response = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+  assert.match(response.headers.get('content-type')!, /text\/event-stream/);
+  const reader = response.body!.pipeThrough(new TextDecoderStream()).getReader();
+  try {
+    assert.equal((await reader.read()).value, ': connected\n\n');
+    for (let i = 1; i <= 3; i++) {
+      ws.send(JSON.stringify(start));
+      ws.send(Buffer.alloc(1024));
+      ws.send(JSON.stringify({ type: 'end', samples: 512 }));
+      await until(async () => await db.interaction.count({ where: { finishedAt: { not: null } } }) === i);
+    }
+    const id = messages.filter(m => m.type === 'started').at(-1).id;
+    let event = '';
+    while (!event.includes('\n\n')) {
+      const chunk = await reader.read();
+      assert.ok(!chunk.done);
+      event += chunk.value;
+    }
+    const [name, payload] = event.trim().split('\n');
+    assert.equal(name, 'event: replyAudioSaved');
+    const published = JSON.parse(payload.slice('data: '.length));
+    assert.equal(published.id, id);
+    assert.equal(published.device.id, deviceId);
+    assert.equal(published.user.id, userId);
+    assert.equal(published.status, 'complete');
+    assert.equal(published.responseText, 'off');
+    assert.equal(published.actions[0].operation, 'setHumidifierPower');
+    assert.deepEqual(published.actions[0].result, { reply: 'off' });
+    assert.equal(published.outputAudio, `/api/interactions/${id}/audio/output`);
+    assert.equal(published.inputAudioKey, undefined);
+    const entry = await db.interaction.findUniqueOrThrow({ where: { id } });
+    assert.equal(entry.status, 'complete');
+    assert.equal((await readFile(join(dir, entry.outputAudioKey!))).toString('ascii', 0, 4), 'RIFF');
+  } finally {
+    await reader.cancel();
+  }
+});
+
+
+test('journal cursors keep a stable history across inserts and combine device, user and time filters', async t => {
+  const { app, db } = await fixture(t);
+  const otherDevice = await db.device.create({ data: { displayName: 'Second device' } });
+  const otherUser = await db.user.create({ data: { displayName: 'Second user' } });
+  const startedAt = new Date('2026-11-23T10:00:00.000Z');
+  const rows = Array.from({ length: 32 }, (_, index) => ({
+    id: v7(), deviceId, userId, startedAt, status: 'complete', inputAudioKey: `history-${index}.wav`,
+  }));
+  await db.interaction.createMany({ data: rows });
+  await db.interaction.create({ data: {
+    deviceId: otherDevice.id, userId: otherUser.id, startedAt,
+    status: 'complete', inputAudioKey: 'second-device.wav',
+  } });
+  const query = new URLSearchParams({ deviceId, userId, from: startedAt.toISOString(), to: startedAt.toISOString() });
+  const first = (await app.inject(`/api/interactions?${query}`)).json();
+  assert.equal(first.items.length, 15);
+  assert.equal(first.total, 32);
+  assert.ok(first.items.every((entry: any) => entry.device.id === deviceId && entry.user.id === userId));
+  await db.interaction.create({ data: {
+    deviceId, userId, status: 'complete', inputAudioKey: 'new.wav',
+    startedAt,
+  } });
+  const ids = first.items.map((entry: any) => entry.id);
+  let cursor = first.nextCursor;
+  while (cursor) {
+    query.set('before', cursor.startedAt);
+    query.set('beforeId', cursor.id);
+    const page = (await app.inject(`/api/interactions?${query}`)).json();
+    ids.push(...page.items.map((entry: any) => entry.id));
+    cursor = page.nextCursor;
+  }
+  assert.deepEqual(ids, rows.map(row => row.id).sort().reverse());
+  const all = (await app.inject('/api/interactions')).json();
+  assert.equal(all.total, 34);
+  const acrossDevices = (await app.inject(`/api/interactions?userId=${otherUser.id}`)).json();
+  assert.equal(acrossDevices.items[0].device.displayName, 'Second device');
+  const empty = (await app.inject('/api/interactions?from=2027-01-01T00:00:00Z')).json();
+  assert.deepEqual(empty.items, []);
+  for (const invalid of [
+    'from=invalid', 'from=2026-11-24T00:00:00Z&to=2026-11-23T00:00:00Z',
+    `beforeId=${rows[0].id}`, 'before=2026-11-23T10:00:00Z',
+  ]) assert.equal((await app.inject(`/api/interactions?${invalid}`)).statusCode, 400);
 });
