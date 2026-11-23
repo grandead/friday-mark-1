@@ -19,7 +19,11 @@
     "predev": "npm run db:deploy && npm run web:build",
     "postinstall": "prisma generate",
     "db:deploy": "prisma migrate deploy",
-    "web:build": "npm run build --workspace friday-web"
+    "web:build": "npm run build --workspace friday-web",
+    "setup:ollama": "bash scripts/setup-ollama.sh",
+    "llm:serve": "tsx scripts/ollama.ts serve",
+    "llm:pull": "tsx scripts/ollama.ts pull",
+    "test:assistant": "tsx scripts/smoke-assistant.ts"
   },
   "dependencies": {
     "@fastify/static": "^10.1.12",

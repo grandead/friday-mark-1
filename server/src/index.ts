@@ -1,4 +1,7 @@
 import { serverPort as port } from './config/port.js';
+import { llmConfig } from './config/llm.js';
+import { createOllama } from './services/llm/ollama.js';
+import { createAssistant } from './services/assistant/reply.js';
 import { connectDatabase } from './services/database/client.js';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -12,11 +15,13 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const shutdown = new AbortController();
 const speech = await createSpeechRecognizer(root, shutdown.signal);
 const db = connectDatabase();
+const llm = createOllama({ ...llmConfig, signal: shutdown.signal });
 const app = await buildApp({
   db,
   recordingsDir: join(root, 'recordings'),
   webDir: join(root, 'web/dist'),
   ...speech,
+  generateReply: createAssistant(db, llm),
   setHumidifierPower: power => setHumidifierPower(power, shutdown.signal),
   synthesizeReply: (text, output) => synthesizeReply(text, output, shutdown.signal),
 });
@@ -28,6 +33,7 @@ for (const addresses of Object.values(networkInterfaces())) {
   }
 }
 console.log('Распознавание:', speech.recognizer);
+console.log('LLM:', llm.model, 'через', llmConfig.baseUrl);
 console.log('Скажи «Пятница» и команду. Полторы секунды тишины завершают запись. Ручная запись — удержанием сенсора.');
 const stop = async () => { shutdown.abort(); await app.close(); await db.$disconnect(); process.exit(0); };
 process.once('SIGINT', stop); process.once('SIGTERM', stop);

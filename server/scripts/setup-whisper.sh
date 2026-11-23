@@ -14,4 +14,10 @@ if [[ ! -f models/ggml-small.bin ]]; then
     https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin
   mv models/ggml-small.bin.part models/ggml-small.bin
 fi
-printf '\nWhisper ready. Start the server with: npm start\n'
+# Silero VAD prevents empty/noisy recordings from being decoded as speech.
+if [[ ! -f models/ggml-silero-v5.1.2.bin ]]; then
+  curl --fail --location --retry 3 --output models/ggml-silero-v5.1.2.bin.part \
+    https://huggingface.co/ggml-org/whisper-vad/resolve/main/ggml-silero-v5.1.2.bin
+  mv models/ggml-silero-v5.1.2.bin.part models/ggml-silero-v5.1.2.bin
+fi
+printf '\nWhisper ready. Start with ASR_ENGINE=whisper npm start, or ASR_ENGINE=hybrid npm start if Vosk is installed.\n'

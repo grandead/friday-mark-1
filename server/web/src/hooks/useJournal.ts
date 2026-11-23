@@ -87,7 +87,7 @@ export function useJournal(query: string) {
     events.onerror = () => {
       setState(s => ({ ...s, reconnecting: true }));
     };
-    events.addEventListener('replyAudioSaved', event => {
+    events.addEventListener('interactionUpdated', event => {
       const item: Entry = JSON.parse(event.data);
       const deviceId = filters.get('deviceId');
       const userId = filters.get('userId');

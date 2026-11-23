@@ -1,7 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { getJournalEntry } from '../services/journal/journal.js';
 import type { FastifyInstance } from 'fastify';
-import type { SavedReply } from '../services/interactions/processor.js';
 import type { ServerResponse } from 'node:http';
 
 export function createJournalEvents(db: PrismaClient, log: (message: string) => void) {
@@ -29,12 +28,12 @@ export function createJournalEvents(db: PrismaClient, log: (message: string) => 
     });
   }
 
-  async function replyAudioSaved(reply: SavedReply) {
+  async function interactionUpdated(id: string) {
     // A delivery failure must not turn a successfully processed interaction into a failure.
     try {
-      const entry = await getJournalEntry(db, reply.id);
+      const entry = await getJournalEntry(db, id);
       if (!entry) return;
-      const frame = `event: replyAudioSaved\ndata: ${JSON.stringify(entry)}\n\n`;
+      const frame = `event: interactionUpdated\ndata: ${JSON.stringify(entry)}\n\n`;
       for (const response of clients) {
         response.write(frame);
       }
@@ -43,5 +42,5 @@ export function createJournalEvents(db: PrismaClient, log: (message: string) => 
     }
   }
 
-  return { routes, replyAudioSaved };
+  return { routes, interactionUpdated };
 }

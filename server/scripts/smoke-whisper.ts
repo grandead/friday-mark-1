@@ -14,7 +14,7 @@ const database = await createTestDatabase();
 const app = await buildApp({
   db: database.db,
   recordingsDir: folder,
-  transcribe: createTranscriber(join(root, '.tools/whisper.cpp/build/bin/whisper-cli'), join(root, 'models/ggml-small.bin')),
+  transcribe: createTranscriber(join(root, '.tools/whisper.cpp/build/bin/whisper-cli'), join(root, 'models/ggml-small.bin'), 'ru', undefined, { vadModel: join(root, 'models/ggml-silero-v5.1.2.bin') }),
 });
 try {
   const address = await app.listen({ host: '127.0.0.1', port: 0 });

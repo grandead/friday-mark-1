@@ -45,6 +45,7 @@ test('command failure preserves the transcript and the next recording can contro
   const phrases = ['Включи увлажнитель.', 'Выключи увлажнитель.'];
   const { ws, messages, until, db } = await fixture(t, {
     transcribe: async () => phrases.shift()!,
+    generateReply: async () => { assert.fail('Device command must bypass LLM'); },
     setHumidifierPower: async power => {
       commands.push(power);
       if (power === 'on') throw new Error('таймаут');
@@ -180,7 +181,7 @@ test('HTTP health tracks the same in-flight transcription as the audio socket', 
     failRecognition(new Error('recognizer unavailable'));
   }
   await until(() => messages.some(message => message.type === 'transcription_error'));
-  assert.equal((await health()).transcriptionJobs, 0);
+  await until(async () => (await health()).transcriptionJobs === 0);
   const row = await db.interaction.findFirstOrThrow();
   assert.equal(row.status, 'failed');
   assert.match(row.inputAudioKey, /\.wav$/);
@@ -217,7 +218,7 @@ test('journal lists a device recording and serves its WAV by id with byte ranges
   assert.equal((await app.inject('/api/interactions?deviceId=invalid')).statusCode, 400);
 });
 
-test('journal emits only after reply audio is saved and the interaction is complete', async t => {
+test('journal publishes completed and failed interactions, including replies without audio', async t => {
   const phrases = ['Привет', 'Включи увлажнитель', 'Выключи увлажнитель'];
   const { db, ws, until, messages, dir } = await fixture(t, {
     transcribe: async () => phrases.shift()!,
@@ -246,9 +247,21 @@ test('journal emits only after reply audio is saved and the interaction is compl
       assert.ok(!chunk.done);
       event += chunk.value;
     }
-    const [name, payload] = event.trim().split('\n');
-    assert.equal(name, 'event: replyAudioSaved');
-    const published = JSON.parse(payload.slice('data: '.length));
+    while (event.split('\n\n').filter(Boolean).length < 3) {
+      const chunk = await reader.read();
+      assert.ok(!chunk.done);
+      event += chunk.value;
+    }
+    const publishedEntries = event.trim().split('\n\n').map(frame => {
+      const [name, payload] = frame.split('\n');
+      assert.equal(name, 'event: interactionUpdated');
+      return JSON.parse(payload.slice('data: '.length));
+    });
+    assert.deepEqual(publishedEntries.map(entry => entry.status), ['complete', 'failed', 'complete']);
+    assert.equal(publishedEntries[0].outputAudio, null);
+    assert.equal(publishedEntries[1].responseText, 'on');
+    assert.match(publishedEntries[1].error, /Synthesis failed/);
+    const published = publishedEntries[2];
     assert.equal(published.id, id);
     assert.equal(published.device.id, deviceId);
     assert.equal(published.user.id, userId);
@@ -309,4 +322,44 @@ test('journal cursors keep a stable history across inserts and combine device, u
     'from=invalid', 'from=2026-11-24T00:00:00Z&to=2026-11-23T00:00:00Z',
     `beforeId=${rows[0].id}`, 'before=2026-11-23T10:00:00Z',
   ]) assert.equal((await app.inject(`/api/interactions?${invalid}`)).statusCode, 400);
+});
+
+
+test('LLM replies survive TTS failure, model failures do not block the queue, and blank speech is skipped', async t => {
+  const phrases = ['Первый вопрос', 'Второй вопрос', 'Третий вопрос', '   '];
+  const generated: string[] = [];
+  const spoken: string[] = [];
+  const { ws, messages, until, db } = await fixture(t, {
+    transcribe: async () => phrases.shift()!,
+    generateReply: async (id, text) => {
+      assert.equal((await db.interaction.findUniqueOrThrow({ where: { id } })).transcript, text);
+      generated.push(text);
+      if (text === 'Второй вопрос') throw new Error('Model unavailable');
+      return 'Ответ на ' + text;
+    },
+    synthesizeReply: async (text, output) => {
+      spoken.push(text);
+      if (text.endsWith('Первый вопрос')) throw new Error('TTS unavailable');
+      await copyFile(output.replace(/\.reply\.wav$/, '.wav'), output);
+    },
+  });
+  for (let count = 1; count <= 4; count++) {
+    ws.send(JSON.stringify(start));
+    ws.send(Buffer.alloc(1024));
+    ws.send(JSON.stringify({ type: 'end', samples: 512 }));
+    await until(async () => await db.interaction.count({ where: { finishedAt: { not: null } } }) === count);
+  }
+  const rows = await db.interaction.findMany({ orderBy: [{ startedAt: 'asc' }, { id: 'asc' }] });
+  assert.deepEqual(rows.map(row => row.status), ['failed', 'failed', 'complete', 'complete']);
+  assert.equal(rows[0].responseText, 'Ответ на Первый вопрос');
+  assert.equal(rows[0].responseSource, 'llm');
+  assert.equal(rows[0].outputAudioKey, null);
+  assert.match(rows[1].error!, /Model unavailable/);
+  assert.equal(rows[2].responseSource, 'llm');
+  assert.ok(rows[2].outputAudioKey);
+  assert.equal(rows[3].responseText, null);
+  assert.equal(generated.length, 3);
+  assert.equal(spoken.length, 2);
+  assert.ok(messages.some(message => message.type === 'processing_error'));
+  assert.ok(!messages.some(message => message.type === 'transcription_error'));
 });

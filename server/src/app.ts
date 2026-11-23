@@ -14,7 +14,7 @@ type Options = ProcessingOptions & { recordingsDir: string; recognizer?: string;
 export async function buildApp(options: Options) {
   const app = Fastify({ logger: false });
   const journalEvents = createJournalEvents(options.db, options.log ?? console.log);
-  const processor = new InteractionProcessor(options, journalEvents.replyAudioSaved);
+  const processor = new InteractionProcessor(options, journalEvents.interactionUpdated);
   const { db, recordingsDir, recognizer, log = console.log } = options;
   mkdirSync(recordingsDir, { recursive: true });
 
