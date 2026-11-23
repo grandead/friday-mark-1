@@ -1,0 +1,11 @@
+.tools/
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+__pycache__/
+.DS_Store
+.local/
+
+# Legacy location of generated personal voice templates
+/main/wakeword_model.inc

@@ -1,0 +1,84 @@
+menu "Friday display"
+
+    config FRIDAY_LCD_SCLK
+        int "SCL / SPI clock GPIO"
+        range 0 33
+        default 18
+
+    config FRIDAY_LCD_MOSI
+        int "SDA / SPI MOSI GPIO"
+        range 0 33
+        default 23
+
+    config FRIDAY_LCD_RESET
+        int "RES GPIO"
+        range 0 33
+        default 16
+
+    config FRIDAY_LCD_DC
+        int "DC GPIO"
+        range 0 33
+        default 17
+
+    config FRIDAY_LCD_SPI_MODE
+        int "SPI mode"
+        range 0 3
+        default 3
+        help
+            Start with mode 3 for the seven-pin ST7789 module without CS.
+            If there is only a backlight, check wiring first, then try mode 0.
+
+    config FRIDAY_LCD_CLOCK_MHZ
+        int "SPI clock (MHz)"
+        range 1 40
+        default 10
+        help
+            A conservative clock for short breadboard wires.
+
+    config FRIDAY_LCD_X_GAP
+        int "Panel X offset"
+        range 0 80
+        default 0
+
+    config FRIDAY_LCD_Y_GAP
+        int "Panel Y offset"
+        range 0 80
+        default 0
+        help
+            Some 240x240 modules use rows 80..319 of ST7789 memory.
+            Try 80 if the image is shifted or clipped.
+
+    config FRIDAY_LCD_INVERT
+        bool "Invert panel colors (usual for IPS ST7789)"
+        default y
+
+    config FRIDAY_LCD_BGR
+        bool "Use BGR color order instead of RGB"
+        default n
+
+endmenu
+
+menu "Friday recording"
+    config FRIDAY_BUTTON_GPIO
+        int "Built-in TOUCH7 electrode GPIO"
+        range 27 27
+        default 27
+endmenu
+
+menu "Friday microphone"
+
+    config FRIDAY_MIC_ENABLE
+        bool "Enable MAX9814 voice capture"
+        default y
+        help
+            Disable to return to the original Hello, world display test.
+
+    config FRIDAY_MIC_GPIO
+        int "MAX9814 OUT GPIO (ADC1)"
+        range 32 39
+        default 34
+        help
+            GPIO34 is ADC1 channel 6 on ESP32-WROOM-32.
+            Use an exposed ADC1 pin that is not used by the display.
+
+endmenu

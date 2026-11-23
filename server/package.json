@@ -1,0 +1,31 @@
+{
+  "name": "friday-server",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "check": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "setup:whisper": "bash scripts/setup-whisper.sh",
+    "setup:humidifier": "uv run scripts/humidifier-status.py --save-token",
+    "voice": "node scripts/synthesize-reply.mjs",
+    "send:wav": "tsx scripts/send-wav.ts",
+    "test:whisper": "tsx scripts/smoke-whisper.ts"
+  },
+  "dependencies": {
+    "@fastify/websocket": "^11.2.0",
+    "fastify": "^5.6.2",
+    "sherpa-onnx-node": "2.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "ws": "^8.18.3"
+  }
+}
