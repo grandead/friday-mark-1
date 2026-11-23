@@ -32,7 +32,7 @@
 #else
 #define FRIDAY_WIFI_SSID ""
 #define FRIDAY_WIFI_PASSWORD ""
-#define FRIDAY_SERVER_URI "ws://localhost:3000/audio"
+#define FRIDAY_SERVER_URI "ws://localhost:33000/audio"
 #endif
 
 static const char *TAG = "stream";
@@ -106,7 +106,9 @@ static void allocate_clip(void)
     ESP_LOGI(TAG, "PCM16 RAM: %u samples at %d Hz (%u ms), free heap %u bytes",
              ram_capacity, PCM_RATE, ram_capacity * 1000 / PCM_RATE, (unsigned)heap_caps_get_free_size(caps));
 }
-static char start_message[80];
+#define FRIDAY_DEVICE_ID "01a20858-a582-724b-950b-855d0dfa5bec"
+#define FRIDAY_USER_ID "01a20858-a582-7fa5-b8a6-a8b5bccf8b4a"
+static char start_message[192];
 
 static bool radio_suspended(void)
 {
@@ -340,7 +342,9 @@ static void sender_task(void *argument)
 void stream_start(void)
 {
     snprintf(start_message, sizeof(start_message),
-             "{\"type\":\"start\",\"sampleRate\":%d,\"channels\":1,\"format\":\"s16le\"}", RECORDING_RATE);
+             "{\"type\":\"start\",\"deviceId\":\"" FRIDAY_DEVICE_ID "\","
+             "\"userId\":\"" FRIDAY_USER_ID "\",\"sampleRate\":%d,"
+             "\"channels\":1,\"format\":\"s16le\"}", RECORDING_RATE);
 #if FRIDAY_RAM_CAPTURE_TEST && FRIDAY_FIR_PAIR_TEST
     ESP_LOGI(TAG, "FIR diagnostic: %s, emit previous PCM frame",
              FRIDAY_FIR_PAIR_CONTROL ? "resample each ADC frame" : "resample every two ADC frames");

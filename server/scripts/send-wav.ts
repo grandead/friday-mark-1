@@ -1,3 +1,5 @@
+import { serverPort } from '../src/config/port.js';
+import { deviceId, userId } from '../src/config/identity.js';
 import { readFile } from 'node:fs/promises';
 import { once } from 'node:events';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -39,7 +41,7 @@ export async function sendWav(path: string, url: string): Promise<string> {
   void result.catch(() => {});
   try {
     await once(socket, 'open');
-    socket.send(JSON.stringify({ type: 'start', sampleRate, channels: 1, format: 's16le' }));
+    socket.send(JSON.stringify({ type: 'start', deviceId, userId, sampleRate, channels: 1, format: 's16le' }));
     for (let at = 0; at < pcm.length; at += 1024) {
       if (socket.readyState !== WebSocket.OPEN) throw new Error('Disconnected during recording');
       const frame = pcm.subarray(at, at + 1024);
@@ -52,6 +54,6 @@ export async function sendWav(path: string, url: string): Promise<string> {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (!process.argv[2]) throw new Error('Usage: npm run send:wav -- /absolute/file.wav [ws://localhost:3000/audio]');
-  console.log(await sendWav(process.argv[2], process.argv[3] ?? 'ws://127.0.0.1:3000/audio'));
+  if (!process.argv[2]) throw new Error(`Usage: npm run send:wav -- /absolute/file.wav [ws://localhost:${serverPort}/audio]`);
+  console.log(await sendWav(process.argv[2], process.argv[3] ?? `ws://127.0.0.1:${serverPort}/audio`));
 }

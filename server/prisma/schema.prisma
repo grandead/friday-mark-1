@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  displayName  String
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+  interactions Interaction[]
+
+  @@map("users")
+}
+
+model Device {
+  id           String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  displayName  String
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+  lastSeenAt   DateTime?     @db.Timestamptz(3)
+  interactions Interaction[]
+
+  @@map("devices")
+}
+
+model Interaction {
+  id             String              @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  deviceId       String              @db.Uuid
+  userId         String              @db.Uuid
+  device         Device              @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  startedAt      DateTime            @default(now()) @db.Timestamptz(3)
+  finishedAt     DateTime?           @db.Timestamptz(3)
+  status         String
+  inputAudioKey  String              @unique
+  transcript     String?
+  responseText   String?
+  responseSource String?
+  outputAudioKey String?
+  error          String?
+  actions        InteractionAction[]
+
+  @@index([deviceId, startedAt])
+  @@index([userId, startedAt])
+  @@map("interactions")
+}
+
+model InteractionAction {
+  id            String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  interactionId String      @db.Uuid
+  interaction   Interaction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  sequence      Int
+  initiator     String
+  service       String
+  operation     String
+  arguments     Json        @db.JsonB
+  result        Json?       @db.JsonB
+  error         String?
+
+  @@unique([interactionId, sequence])
+  @@map("interactionActions")
+}

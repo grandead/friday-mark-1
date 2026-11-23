@@ -14,13 +14,13 @@ try:
     ip = subprocess.check_output(['/usr/sbin/ipconfig', 'getifaddr', 'en0'], text=True).strip()
 except (OSError, subprocess.CalledProcessError):
     ip = ''
-default = f'ws://{ip}:3000/audio' if ip else ''
+default = f'ws://{ip}:33000/audio' if ip else ''
 uri = input(f'Server WebSocket URL [{default}]: ' if default else 'Server WebSocket URL: ').strip() or default
 if len(ssid.encode()) > 32 or not ssid or len(password.encode()) > 63:
     raise SystemExit('Invalid SSID/password length.')
 url = urlparse(uri)
 if url.scheme != 'ws' or not url.hostname or url.path != '/audio':
-    raise SystemExit('Expected ws://MAC_LAN_IP:3000/audio')
+    raise SystemExit('Expected ws://MAC_LAN_IP:33000/audio')
 folder = root / '.local'
 folder.mkdir(mode=0o700, exist_ok=True)
 path = folder / 'network_config.h'

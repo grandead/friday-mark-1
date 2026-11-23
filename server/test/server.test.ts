@@ -1,3 +1,6 @@
+import { createTestDatabase } from './database.js';
+import { version, v7 } from 'uuid';
+import { deviceId, userId } from '../src/config/identity.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
@@ -6,24 +9,25 @@ import { join } from 'node:path';
 import { once } from 'node:events';
 import { WebSocket } from 'ws';
 import { buildApp } from '../src/app.js';
-import { humidifierCommand } from '../src/humidifier.js';
+import { humidifierCommand } from '../src/services/smartHome/humidifier.js';
 
-const start = { type: 'start', sampleRate: 20000, channels: 1, format: 's16le' };
+const start = { type: 'start', deviceId, userId, sampleRate: 20000, channels: 1, format: 's16le' };
 async function fixture(t: test.TestContext, options: Partial<Parameters<typeof buildApp>[0]> = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'friday-server-'));
+  const database = await createTestDatabase();
   const calls: string[] = [];
-  const app = await buildApp({ recordingsDir: dir, transcribe: async path => { calls.push(path); return 'Привет'; }, log: () => {}, ...options });
+  const app = await buildApp({ db: database.db, recordingsDir: dir, transcribe: async path => { calls.push(path); return 'Привет'; }, log: () => {}, ...options });
   const address = await app.listen({ host: '127.0.0.1', port: 0 });
   const ws = new WebSocket(address.replace('http:', 'ws:') + '/audio');
   const messages: any[] = [];
   ws.on('message', data => messages.push(JSON.parse(data.toString())));
   await once(ws, 'open');
-  t.after(async () => { ws.terminate(); await app.close(); await rm(dir, { recursive: true, force: true }); });
+  t.after(async () => { ws.terminate(); await app.close(); await database.close(); await rm(dir, { recursive: true, force: true }); });
   const until = async (predicate: () => boolean | Promise<boolean>) => {
     for (let i = 0; i < 200; i++) { if (await predicate()) return; await new Promise(resolve => setTimeout(resolve, 10)); }
     throw new Error('Timed out');
   };
-  return { dir, calls, ws, messages, until };
+  return { app, dir, calls, ws, messages, until, db: database.db };
 }
 
 test('dispatches only complete humidifier commands', () => {
@@ -39,7 +43,7 @@ test('command failure preserves the transcript and the next recording can contro
   const commands: string[] = [];
   const spoken: string[] = [];
   const phrases = ['Включи увлажнитель.', 'Выключи увлажнитель.'];
-  const { ws, messages, until } = await fixture(t, {
+  const { ws, messages, until, db } = await fixture(t, {
     transcribe: async () => phrases.shift()!,
     setHumidifierPower: async power => {
       commands.push(power);
@@ -58,6 +62,18 @@ test('command failure preserves the transcript and the next recording can contro
     ws.send(JSON.stringify({ type: 'end', samples: 512 }));
     await until(() => messages.filter(m => m.type === 'transcript').length === press);
   }
+  await until(async () => await db.interaction.count({ where: { finishedAt: { not: null } } }) === 2);
+  const journal = await db.interaction.findMany({ include: { actions: true }, orderBy: { startedAt: 'asc' } });
+  assert.deepEqual(journal.map(row => row.status), ['failed', 'complete']);
+  for (const row of journal) {
+    assert.equal(version(row.id), 7);
+    assert.equal(row.deviceId, deviceId);
+    assert.equal(row.userId, userId);
+    assert.equal(version(row.actions[0].id), 7);
+  }
+  assert.deepEqual(journal[1].actions[0].arguments, { power: 'off' });
+  assert.deepEqual(journal[1].actions[0].result, { reply: 'Увлажнитель выключен.' });
+  assert.match(journal[0].actions[0].error!, /таймаут/);
   assert.deepEqual(commands, ['on', 'off']);
   assert.deepEqual(spoken, ['Увлажнитель выключен.']);
   assert.ok(logs.some(message => message.startsWith('Голос Пятницы:')));
@@ -134,4 +150,38 @@ test('a rebooted device replaces a stale connection and can record immediately',
   const files = await readdir(dir);
   assert.equal(files.filter(x => x.endsWith('.incomplete.wav')).length, 1);
   assert.equal(files.filter(x => x.endsWith('.wav')).length, 2);
+});
+
+for (const invalid of [{ userId: null }, { deviceId: null }, { userId: v7() }, { deviceId: v7() }]) {
+  test(`rejects unregistered or missing identity: ${Object.keys(invalid)[0]} ${Object.values(invalid)[0]}`, async t => {
+    const { ws, messages, until, db, dir } = await fixture(t);
+    ws.send(JSON.stringify({ ...start, ...invalid }));
+    await until(() => messages.some(m => m.type === 'error'));
+    assert.equal(await db.interaction.count(), 0);
+    assert.deepEqual(await readdir(dir), []);
+  });
+}
+
+test('HTTP health tracks the same in-flight transcription as the audio socket', async t => {
+  let failRecognition!: (reason: Error) => void;
+  const { app, ws, messages, until, db } = await fixture(t, {
+    recognizer: 'test-stt',
+    transcribe: () => new Promise<string>((_, reject) => { failRecognition = reject; }),
+  });
+  const health = async () => (await app.inject({ url: '/health' })).json();
+  assert.deepEqual(await health(), { ok: true, transcriptionJobs: 0, recognizer: 'test-stt' });
+  ws.send(JSON.stringify(start));
+  ws.send(Buffer.alloc(1024));
+  ws.send(JSON.stringify({ type: 'end', samples: 512 }));
+  await until(() => typeof failRecognition === 'function');
+  try {
+    assert.equal((await health()).transcriptionJobs, 1);
+  } finally {
+    failRecognition(new Error('recognizer unavailable'));
+  }
+  await until(() => messages.some(message => message.type === 'transcription_error'));
+  assert.equal((await health()).transcriptionJobs, 0);
+  const row = await db.interaction.findFirstOrThrow();
+  assert.equal(row.status, 'failed');
+  assert.match(row.inputAudioKey, /\.wav$/);
 });

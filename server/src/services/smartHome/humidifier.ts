@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const script = fileURLToPath(new URL('../scripts/humidifier-status.py', import.meta.url));
+const script = fileURLToPath(new URL('../../../scripts/humidifier-status.py', import.meta.url));
 
 export function humidifierCommand(text: string): 'on' | 'off' | undefined {
   const phrase = text.toLowerCase().trim().replace(/\s+/gu, ' ').replace(/[.!]+$/u, '');
