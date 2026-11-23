@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { createJournalEvents } from './api/journalEvents.js';
+import { smartHomeRoutes } from './api/smartHome.js';
 import { journalRoutes } from './api/journal.js';
 import websocket from '@fastify/websocket';
 import { mkdirSync } from 'node:fs';
@@ -21,6 +22,8 @@ export async function buildApp(options: Options) {
   app.addHook('onClose', () => processor.drain());
   await app.register(websocket, { options: { maxPayload: 8192, perMessageDeflate: false } });
   await app.register(fastifyStatic, { root: options.webDir ?? recordingsDir, serve: Boolean(options.webDir) });
+  if (options.webDir) app.get('/smart-home', (_request, reply) => reply.sendFile('index.html'));
+  await app.register(smartHomeRoutes, { db });
   await app.register(journalEvents.routes);
   await app.register(journalRoutes, { db, recordingsDir });
   await app.register(healthRoutes, { processor, recognizer });

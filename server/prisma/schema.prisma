@@ -62,3 +62,66 @@ model InteractionAction {
   @@unique([interactionId, sequence])
   @@map("interactionActions")
 }
+
+// Voice terminals remain in Device. These models describe appliances in a home.
+enum HomeDeviceKind {
+  humidifier
+  airMonitor
+  breezer
+}
+
+enum DeviceRegistrationType {
+  miioToken
+  hommynShareUrl
+}
+
+model Home {
+  id          String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  displayName String
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  rooms       Room[]
+
+  @@map("homes")
+}
+
+model Room {
+  id          String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  homeId      String       @db.Uuid
+  displayName String
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  home        Home         @relation(fields: [homeId], references: [id], onDelete: Restrict)
+  devices     HomeDevice[]
+
+  @@index([homeId])
+  @@map("rooms")
+}
+
+// Fixed model catalogue, populated by migrations, not by the device creation form.
+model HomeDeviceType {
+  id               String                 @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  code             String                 @unique
+  displayName      String
+  vendor           String
+  model            String
+  kind             HomeDeviceKind
+  registrationType DeviceRegistrationType
+  devices          HomeDevice[]
+
+  @@map("homeDeviceTypes")
+}
+
+model HomeDevice {
+  id               String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  roomId           String         @db.Uuid
+  typeId           String         @db.Uuid
+  displayName      String
+  // Credentials included. Do not expose this field in device lists or LLM context.
+  registrationData Json           @db.JsonB
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  room             Room           @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  type             HomeDeviceType @relation(fields: [typeId], references: [id], onDelete: Restrict)
+
+  @@index([roomId])
+  @@index([typeId])
+  @@map("homeDevices")
+}

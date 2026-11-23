@@ -1,0 +1,14 @@
+export type HomeDevice = { id: string; roomId: string; typeId: string; displayName: string };
+export type Room = { id: string; homeId: string; displayName: string; devices: HomeDevice[] };
+export type Home = { id: string; displayName: string; rooms: Room[] };
+export type DeviceType = { id: string; code: string; displayName: string; kind: 'humidifier' | 'airMonitor' | 'breezer'; registrationType: 'miioToken' | 'hommynShareUrl' };
+export type SmartHomeData = { homes: Home[]; deviceTypes: DeviceType[] };
+
+export async function homeRequest<T>(url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(url, { signal, ...(body === undefined ? {} : {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }) });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message ?? 'Не удалось выполнить запрос');
+  return data;
+}

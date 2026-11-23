@@ -9,7 +9,6 @@ import { join } from 'node:path';
 import { once } from 'node:events';
 import { WebSocket } from 'ws';
 import { buildApp } from '../src/app.js';
-import { humidifierCommand } from '../src/services/smartHome/humidifier.js';
 
 const start = { type: 'start', deviceId, userId, sampleRate: 20000, channels: 1, format: 's16le' };
 async function fixture(t: test.TestContext, options: Partial<Parameters<typeof buildApp>[0]> = {}) {
@@ -29,59 +28,6 @@ async function fixture(t: test.TestContext, options: Partial<Parameters<typeof b
   };
   return { app, dir, calls, ws, messages, until, db: database.db };
 }
-
-test('dispatches only complete humidifier commands', () => {
-  assert.equal(humidifierCommand('Пятница, включи увлажнитель воздуха!'), 'on');
-  assert.equal(humidifierCommand(' Выключи  увлажнитель. '), 'off');
-  for (const text of ['Не включи увлажнитель', 'Он сказал: выключи увлажнитель', 'Включи увлажнитель и свет', '']) {
-    assert.equal(humidifierCommand(text), undefined);
-  }
-});
-
-test('command failure preserves the transcript and the next recording can control power', async t => {
-  const logs: string[] = [];
-  const commands: string[] = [];
-  const spoken: string[] = [];
-  const phrases = ['Включи увлажнитель.', 'Выключи увлажнитель.'];
-  const { ws, messages, until, db } = await fixture(t, {
-    transcribe: async () => phrases.shift()!,
-    generateReply: async () => { assert.fail('Device command must bypass LLM'); },
-    setHumidifierPower: async power => {
-      commands.push(power);
-      if (power === 'on') throw new Error('таймаут');
-      return 'Увлажнитель выключен.';
-    },
-    synthesizeReply: async (text, output) => {
-      spoken.push(text);
-      assert.match(output, /\.reply\.wav$/);
-    },
-    log: message => logs.push(message),
-  });
-  for (let press = 1; press <= 2; press++) {
-    ws.send(JSON.stringify(start));
-    ws.send(Buffer.alloc(1024));
-    ws.send(JSON.stringify({ type: 'end', samples: 512 }));
-    await until(() => messages.filter(m => m.type === 'transcript').length === press);
-  }
-  await until(async () => await db.interaction.count({ where: { finishedAt: { not: null } } }) === 2);
-  const journal = await db.interaction.findMany({ include: { actions: true }, orderBy: { startedAt: 'asc' } });
-  assert.deepEqual(journal.map(row => row.status), ['failed', 'complete']);
-  for (const row of journal) {
-    assert.equal(version(row.id), 7);
-    assert.equal(row.deviceId, deviceId);
-    assert.equal(row.userId, userId);
-    assert.equal(version(row.actions[0].id), 7);
-  }
-  assert.deepEqual(journal[1].actions[0].arguments, { power: 'off' });
-  assert.deepEqual(journal[1].actions[0].result, { reply: 'Увлажнитель выключен.' });
-  assert.match(journal[0].actions[0].error!, /таймаут/);
-  assert.deepEqual(commands, ['on', 'off']);
-  assert.deepEqual(spoken, ['Увлажнитель выключен.']);
-  assert.ok(logs.some(message => message.startsWith('Голос Пятницы:')));
-  assert.ok(logs.includes('Ошибка управления увлажнителем: таймаут'));
-  assert.ok(logs.includes('Увлажнитель выключен.'));
-  assert.ok(!messages.some(m => m.type === 'transcription_error'));
-});
 
 test('ordered PCM frames become a valid WAV and one transcript; next press is independent', async t => {
   const { dir, calls, ws, messages, until } = await fixture(t);
@@ -222,7 +168,12 @@ test('journal publishes completed and failed interactions, including replies wit
   const phrases = ['Привет', 'Включи увлажнитель', 'Выключи увлажнитель'];
   const { db, ws, until, messages, dir } = await fixture(t, {
     transcribe: async () => phrases.shift()!,
-    setHumidifierPower: async power => power,
+    generateReply: async (id, transcript) => {
+      if (transcript === 'Привет') return '';
+      const reply = transcript.startsWith('Включи') ? 'on' : 'off';
+      await db.interactionAction.create({ data: { interactionId: id, sequence: 1, initiator: 'llm', service: 'smartHome', operation: 'set_device_power', arguments: { power: reply === 'on' }, result: { reply } } });
+      return reply;
+    },
     synthesizeReply: async (reply, output) => {
       if (reply === 'on') throw new Error('Synthesis failed');
       await copyFile(output.replace(/\.reply\.wav$/, '.wav'), output);
@@ -267,7 +218,7 @@ test('journal publishes completed and failed interactions, including replies wit
     assert.equal(published.user.id, userId);
     assert.equal(published.status, 'complete');
     assert.equal(published.responseText, 'off');
-    assert.equal(published.actions[0].operation, 'setHumidifierPower');
+    assert.equal(published.actions[0].operation, 'set_device_power');
     assert.deepEqual(published.actions[0].result, { reply: 'off' });
     assert.equal(published.outputAudio, `/api/interactions/${id}/audio/output`);
     assert.equal(published.inputAudioKey, undefined);

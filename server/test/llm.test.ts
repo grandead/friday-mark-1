@@ -45,7 +45,7 @@ for (const [name, status, body, error] of [
   ['empty answer', 200, { ...reply, message: { content: '' } }, /пустой или некорректный/],
   ['unfinished answer', 200, { ...reply, done: false }, /пустой или некорректный/],
   ['truncated answer', 200, { ...reply, done_reason: 'length' }, /лимит длины/],
-  ['tool call', 200, { ...reply, message: { content: 'Invoke', tool_calls: [{}] } }, /инструментов/],
+  ['tool call', 200, { ...reply, message: { content: 'Invoke', tool_calls: [{}] } }, /пустой или некорректный/],
 ] as const) {
   test(`Ollama rejects ${name}`, async t => {
     const baseUrl = await endpoint(t, (_req, res) => { res.statusCode = status; res.end(JSON.stringify(body)); });
@@ -112,4 +112,25 @@ test('assistant isolates users, keeps recent chronological history across device
   assert.match(messages[0].content, /Other/);
   const failure = await db.interactionAction.findFirstOrThrow({ where: { interactionId: separate.id } });
   assert.match(failure.error!, /offline/);
+});
+
+test('Ollama transports multiple typed tool calls with empty content and rejects unrequested tools', async t => {
+  let received: any;
+  const toolCall = { function: { name: 'get_device_state', arguments: { device: 'Бризер', room: 'Родительская' } } };
+  const toolCalls = [toolCall, { function: { name: 'get_device_state', arguments: { device: 'Увлажнитель', room: 'Родительская' } } }];
+  const baseUrl = await endpoint(t, async (req, res) => {
+    let body = ''; for await (const chunk of req) body += chunk;
+    received = JSON.parse(body);
+    res.end(JSON.stringify({ ...reply, message: { content: '', tool_calls: toolCalls } }));
+  });
+  const { homeToolDefinitions } = await import('../src/services/smartHome/tools.js');
+  const llm = createOllama({ ...options, baseUrl });
+  const result = await llm.generate([{ role: 'user', content: 'Как бризер?' }], homeToolDefinitions);
+  assert.deepEqual(result.toolCalls, toolCalls);
+  assert.equal(result.text, '');
+  assert.deepEqual(received.tools, homeToolDefinitions);
+  assert.equal(received.options.temperature, 0);
+  assert.equal(received.think, true);
+  assert.equal(received.options.num_predict, 2048);
+  await assert.rejects(llm.generate([]), /не разрешён/);
 });

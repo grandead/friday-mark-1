@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { AudioLines, BookOpen, Cpu, Users, X } from 'lucide-react';
+import { Cpu, Users, X } from 'lucide-react';
 import { EntryList } from '../components/EntryList';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { getJson, type Device, type User } from '../lib/journal';
@@ -56,12 +56,6 @@ export function Journal() {
 
   return (
     <>
-      <header className="mast">
-        <div className="wrap mast-inner">
-          <span className="brand"><i><AudioLines /></i>Пятница</span>
-          <nav aria-label="Основная навигация"><a className="nav" href="/" aria-current="page"><BookOpen size={16} />Журнал</a></nav>
-        </div>
-      </header>
       <main className="wrap">
         <div className="page-heading"><h1>Журнал обращений</h1></div>
         <div className="journal-filters" role="group" aria-label="Фильтры журнала">

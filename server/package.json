@@ -11,7 +11,7 @@
     "check": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts",
     "setup:whisper": "bash scripts/setup-whisper.sh",
-    "setup:humidifier": "uv run scripts/humidifier-status.py --save-token",
+    "setup:home": "uv run scripts/home-miio.py --check && uv run scripts/home-syncleo.py --check",
     "voice": "node scripts/synthesize-reply.mjs",
     "send:wav": "tsx scripts/send-wav.ts",
     "test:whisper": "tsx scripts/smoke-whisper.ts",
@@ -23,7 +23,9 @@
     "setup:ollama": "bash scripts/setup-ollama.sh",
     "llm:serve": "tsx scripts/ollama.ts serve",
     "llm:pull": "tsx scripts/ollama.ts pull",
-    "test:assistant": "tsx scripts/smoke-assistant.ts"
+    "test:assistant": "tsx scripts/smoke-assistant.ts",
+    "test:home": "tsx scripts/smoke-home.ts",
+    "test:ballu": "uv run --offline test/ballu.test.py"
   },
   "dependencies": {
     "@fastify/static": "^10.1.12",

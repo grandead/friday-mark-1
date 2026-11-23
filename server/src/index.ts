@@ -9,7 +9,8 @@ import { networkInterfaces } from 'node:os';
 import { buildApp } from './app.js';
 import { createSpeechRecognizer } from './services/stt/index.js';
 import { synthesizeReply } from './services/tts/supertonic.js';
-import { setHumidifierPower } from './services/smartHome/humidifier.js';
+import { createHomeTools } from './services/smartHome/tools.js';
+import { runDeviceCommand } from './services/smartHome/driver.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const shutdown = new AbortController();
@@ -21,8 +22,7 @@ const app = await buildApp({
   recordingsDir: join(root, 'recordings'),
   webDir: join(root, 'web/dist'),
   ...speech,
-  generateReply: createAssistant(db, llm),
-  setHumidifierPower: power => setHumidifierPower(power, shutdown.signal),
+  generateReply: createAssistant(db, llm, createHomeTools(db, command => runDeviceCommand(command, shutdown.signal))),
   synthesizeReply: (text, output) => synthesizeReply(text, output, shutdown.signal),
 });
 await app.listen({ host: '0.0.0.0', port });

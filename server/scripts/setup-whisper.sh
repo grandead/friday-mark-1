@@ -20,4 +20,4 @@ if [[ ! -f models/ggml-silero-v5.1.2.bin ]]; then
     https://huggingface.co/ggml-org/whisper-vad/resolve/main/ggml-silero-v5.1.2.bin
   mv models/ggml-silero-v5.1.2.bin.part models/ggml-silero-v5.1.2.bin
 fi
-printf '\nWhisper ready. Start with ASR_ENGINE=whisper npm start, or ASR_ENGINE=hybrid npm start if Vosk is installed.\n'
+printf '\nWhisper ready. Start with ASR_ENGINE=whisper npm start.\n'

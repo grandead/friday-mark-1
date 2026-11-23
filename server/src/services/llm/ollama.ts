@@ -12,7 +12,7 @@ export function createOllama(options: OllamaOptions): LanguageModel {
 
   return {
     provider: 'ollama', model,
-    async generate(messages) {
+    async generate(messages, tools) {
       const started = performance.now();
       const signal = AbortSignal.any([shutdown, AbortSignal.timeout(timeoutMs)]);
       let response: Response;
@@ -22,8 +22,8 @@ export function createOllama(options: OllamaOptions): LanguageModel {
           method: 'POST', signal,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model, messages, stream: false, think: false, keep_alive: '15m',
-            options: { num_ctx: 8192, num_predict: 512, temperature: 0.6 },
+            model, messages, tools, stream: false, think: Boolean(tools?.length), keep_alive: '15m',
+            options: { num_ctx: 8192, num_predict: tools?.length ? 2048 : 512, temperature: tools?.length ? 0 : 0.6 },
           }),
         });
         body = await response.json();
@@ -40,9 +40,9 @@ export function createOllama(options: OllamaOptions): LanguageModel {
       if (!parsed.success) throw new Error('Ollama вернула пустой или некорректный ответ');
       const reply = parsed.data;
       if (reply.done_reason === 'length') throw new Error('Ответ Ollama превысил лимит длины');
-      if (reply.message.tool_calls?.length) throw new Error('Вызовы инструментов LLM пока не подключены');
+      if (reply.message.tool_calls?.length && !tools?.length) throw new Error('Вызов инструментов не разрешён в этом запросе');
       return {
-        text: reply.message.content, model: reply.model,
+        text: reply.message.content, toolCalls: reply.message.tool_calls, model: reply.model,
         durationMs: Math.round(performance.now() - started),
         inputTokens: reply.prompt_eval_count, outputTokens: reply.eval_count,
       };

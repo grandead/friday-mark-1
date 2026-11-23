@@ -1,11 +1,9 @@
 import type { PrismaClient } from '@prisma/client';
 import { basename } from 'node:path';
-import { humidifierCommand } from '../smartHome/humidifier.js';
 
 export type ProcessingOptions = {
   db: PrismaClient;
   transcribe: (path: string) => Promise<string>;
-  setHumidifierPower?: (power: 'on' | 'off') => Promise<string>;
   generateReply?: (interactionId: string, transcript: string) => Promise<string>;
   synthesizeReply?: (text: string, output: string) => Promise<void>;
   log?: (message: string) => void;
@@ -53,7 +51,7 @@ export class InteractionProcessor {
   drain() { return this.queue; }
 
   private async process(id: string, path: string, notify: Notify) {
-    const { db, transcribe, setHumidifierPower, synthesizeReply, generateReply } = this.options;
+    const { db, transcribe, synthesizeReply, generateReply } = this.options;
     const where = { id };
     this.log('Распознаю…');
     const text = await transcribe(path);
@@ -63,27 +61,7 @@ export class InteractionProcessor {
 
     let reply: string | undefined;
     let outputAudioKey: string | undefined;
-    const power = humidifierCommand(text);
-    if (power && setHumidifierPower) {
-      const action = await db.interactionAction.create({ data: {
-        interactionId: id, sequence: 1, initiator: 'handler', service: 'miIO',
-        operation: 'setHumidifierPower', arguments: { power },
-      } });
-      try {
-        reply = await setHumidifierPower(power);
-      } catch (error) {
-        await db.$transaction([
-          db.interactionAction.update({ where: { id: action.id }, data: { error: String(error) } }),
-          this.fail(id, error),
-        ]);
-        this.log(`Ошибка управления увлажнителем: ${error instanceof Error ? error.message : error}`);
-        return;
-      }
-      await db.$transaction([
-        db.interactionAction.update({ where: { id: action.id }, data: { result: { reply } } }),
-        db.interaction.update({ where, data: { responseText: reply, responseSource: 'handler' } }),
-      ]);
-    } else if (text.trim() && generateReply) {
+    if (text.trim() && generateReply) {
       this.log('Пятница думает…');
       reply = await generateReply(id, text);
       await db.interaction.update({ where, data: { responseText: reply, responseSource: 'llm' } });
