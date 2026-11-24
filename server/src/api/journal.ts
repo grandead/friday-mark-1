@@ -1,6 +1,6 @@
-import { errorResponse } from '../../shared/errors.js';
-import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
+import type { FastifyInstance } from 'fastify';
+import { errorResponse } from '../../shared/errors.js';
 import { audioKey, listDevices, listInteractions, listUsers } from '../services/journal/journal.js';
 import { audioParams, journalQuery } from '../services/validation/journal.js';
 

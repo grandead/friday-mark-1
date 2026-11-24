@@ -1,6 +1,6 @@
 node_modules/
 .tools/
-models/
+/models/
 recordings/
 .env
 .DS_Store

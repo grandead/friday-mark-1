@@ -32,7 +32,11 @@ export function isErrorCode(value: unknown): value is ErrorCode {
   return typeof value === 'string' && Object.hasOwn(errorMessages, value);
 }
 export class AppError extends Error {
-  constructor(readonly code: ErrorCode, message: string = errorMessages[code], options?: ErrorOptions) {
+  constructor(
+    readonly code: ErrorCode,
+    message: string = errorMessages[code],
+    options?: ErrorOptions,
+  ) {
     super(message, options);
     this.name = 'AppError';
   }

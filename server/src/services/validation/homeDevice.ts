@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import type { DeviceRegistrationType } from '@prisma/client';
+import { z } from 'zod';
 
 export const homeDeviceInput = z.strictObject({
   roomId: z.uuidv7(),
@@ -11,17 +11,29 @@ export const homeDeviceInput = z.strictObject({
 export const deviceRegistrationSchemas = {
   miioToken: z.strictObject({
     ip: z.ipv4(),
-    token: z.string().regex(/^[a-fA-F0-9]{32}$/).transform(token => token.toLowerCase()),
+    token: z
+      .string()
+      .regex(/^[a-fA-F0-9]{32}$/)
+      .transform((token) => token.toLowerCase()),
   }),
   hommynShareUrl: z.strictObject({
-    shareUrl: z.string().trim().max(4096).refine(value => {
-      try {
-        const url = new URL(value);
-        return url.protocol === 'rusklimat:' && url.hostname === 'device-share'
-          && /^\/rusclimate\/\d+\/[^/]+\/?$/.test(url.pathname)
-          && Boolean(url.searchParams.get('token')?.trim());
-      } catch { return false; }
-    }, 'Expected a HOMMYN device share URL with a token'),
+    shareUrl: z
+      .string()
+      .trim()
+      .max(4096)
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return (
+            url.protocol === 'rusklimat:' &&
+            url.hostname === 'device-share' &&
+            /^\/rusclimate\/\d+\/[^/]+\/?$/.test(url.pathname) &&
+            Boolean(url.searchParams.get('token')?.trim())
+          );
+        } catch {
+          return false;
+        }
+      }, 'Expected a HOMMYN device share URL with a token'),
   }),
 } satisfies Record<DeviceRegistrationType, z.ZodType>;
 

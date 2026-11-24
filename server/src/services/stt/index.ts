@@ -8,7 +8,8 @@ import { createTranscriber } from './whisper.js';
 const run = promisify(execFile);
 
 export async function createSpeechRecognizer(root: string, signal: AbortSignal) {
-  const { ASR_ENGINE, WHISPER_BIN, WHISPER_MODEL, WHISPER_LANGUAGE, WHISPER_VAD_MODEL } = process.env;
+  const { ASR_ENGINE, WHISPER_BIN, WHISPER_MODEL, WHISPER_LANGUAGE, WHISPER_VAD_MODEL } =
+    process.env;
   const engine = ASR_ENGINE ?? 'whisper';
   if (!['vosk', 'whisper'].includes(engine)) throw new Error('ASR_ENGINE must be vosk or whisper');
   if (engine !== 'vosk') {
@@ -18,7 +19,9 @@ export async function createSpeechRecognizer(root: string, signal: AbortSignal) 
     await access(model);
     const vadModel = WHISPER_VAD_MODEL ?? join(root, 'models/ggml-silero-v5.1.2.bin');
     await access(vadModel);
-    const whisper = createTranscriber(binary, model, WHISPER_LANGUAGE ?? 'ru', signal, { vadModel });
+    const whisper = createTranscriber(binary, model, WHISPER_LANGUAGE ?? 'ru', signal, {
+      vadModel,
+    });
     return { recognizer: 'whisper', transcribe: whisper };
   }
 
@@ -29,10 +32,11 @@ export async function createSpeechRecognizer(root: string, signal: AbortSignal) 
   await access(join(model, 'am/final.mdl'));
   async function transcribe(path: string) {
     const { stdout } = await run(python, [join(root, 'scripts/transcribe-vosk.py'), model, path], {
-      timeout: 300_000, signal,
+      timeout: 300_000,
+      signal,
     });
     const text = stdout.trim();
-    await writeFile(path.replace(/\.wav$/, '.txt'), text + '\n', 'utf8');
+    await writeFile(path.replace(/\.wav$/, '.txt'), `${text}\n`, 'utf8');
     return text;
   }
   return { recognizer, transcribe };

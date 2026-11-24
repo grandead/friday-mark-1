@@ -1,14 +1,14 @@
-import Fastify from 'fastify';
+import { mkdirSync } from 'node:fs';
 import fastifyStatic from '@fastify/static';
+import websocket from '@fastify/websocket';
+import Fastify from 'fastify';
+import { healthRoutes } from './api/health.js';
+import { journalRoutes } from './api/journal.js';
 import { createJournalEvents } from './api/journalEvents.js';
 import { smartHomeRoutes } from './api/smartHome.js';
-import { journalRoutes } from './api/journal.js';
-import websocket from '@fastify/websocket';
-import { mkdirSync } from 'node:fs';
-import { healthRoutes } from './api/health.js';
-import { audioRoutes } from './ws/audio.js';
-import { InteractionProcessor, type ProcessingOptions } from './services/interactions/processor.js';
 import { RecordingSession } from './services/audio/session.js';
+import { InteractionProcessor, type ProcessingOptions } from './services/interactions/processor.js';
+import { audioRoutes } from './ws/audio.js';
 
 type Options = ProcessingOptions & { recordingsDir: string; recognizer?: string; webDir?: string };
 
@@ -21,7 +21,10 @@ export async function buildApp(options: Options) {
 
   app.addHook('onClose', () => processor.drain());
   await app.register(websocket, { options: { maxPayload: 8192, perMessageDeflate: false } });
-  await app.register(fastifyStatic, { root: options.webDir ?? recordingsDir, serve: Boolean(options.webDir) });
+  await app.register(fastifyStatic, {
+    root: options.webDir ?? recordingsDir,
+    serve: Boolean(options.webDir),
+  });
   if (options.webDir) app.get('/smart-home', (_request, reply) => reply.sendFile('index.html'));
   await app.register(smartHomeRoutes, { db });
   await app.register(journalEvents.routes);
@@ -29,7 +32,8 @@ export async function buildApp(options: Options) {
   await app.register(healthRoutes, { processor, recognizer });
   await app.register(audioRoutes, {
     log,
-    openSession: (send, onTimeout) => new RecordingSession({ db, recordingsDir, processor, log }, send, onTimeout),
+    openSession: (send, onTimeout) =>
+      new RecordingSession({ db, recordingsDir, processor, log }, send, onTimeout),
   });
   return app;
 }

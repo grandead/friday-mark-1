@@ -1,5 +1,5 @@
-import { access, rename, rm } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
+import { access, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sherpa from 'sherpa-onnx-node';
@@ -10,7 +10,9 @@ if (!output || !text?.trim()) {
   process.exit(1);
 }
 
-const dir = fileURLToPath(new URL('../models/sherpa-onnx-supertonic-3-tts-int8-2026-05-11/', import.meta.url));
+const dir = fileURLToPath(
+  new URL('../models/sherpa-onnx-supertonic-3-tts-int8-2026-05-11/', import.meta.url),
+);
 const supertonic = {
   durationPredictor: join(dir, 'duration_predictor.int8.onnx'),
   textEncoder: join(dir, 'text_encoder.int8.onnx'),
@@ -20,16 +22,19 @@ const supertonic = {
   unicodeIndexer: join(dir, 'unicode_indexer.bin'),
   voiceStyle: join(dir, 'voice.bin'),
 };
-await Promise.all(Object.values(supertonic).map(path => access(path)));
+await Promise.all(Object.values(supertonic).map((path) => access(path)));
 const engine = new sherpa.OfflineTts({ model: { supertonic, numThreads: 3, provider: 'cpu' } });
 const generationConfig = new sherpa.GenerationConfig({
   sid: 1, // F2 in this model release
-  numSteps: 8, speed: 1, extra: { lang: 'ru' },
+  numSteps: 8,
+  speed: 1,
+  extra: { lang: 'ru' },
 });
 const audio = engine.generate({ text, generationConfig });
-const temp = output + '.' + randomUUID() + '.tmp';
+const temp = `${output}.${randomUUID()}.tmp`;
 try {
-  if (!audio.samples.length || !sherpa.writeWave(temp, audio)) throw new Error('Failed to write synthesized speech to WAV');
+  if (!audio.samples.length || !sherpa.writeWave(temp, audio))
+    throw new Error('Failed to write synthesized speech to WAV');
   await rename(temp, output);
 } finally {
   await rm(temp, { force: true });

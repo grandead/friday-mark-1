@@ -1,12 +1,12 @@
 import {
-  Cpu,
   CalendarDays,
   CircleUserRound,
+  Cpu,
   Headphones,
   ListChecks,
   MessageSquareText,
 } from 'lucide-react';
-import { date, statusText, time, type Entry } from '../lib/journal';
+import { date, type Entry, statusText, time } from '../lib/journal';
 
 function Player({ src, label }: { src: string; label: string }) {
   return (
@@ -15,6 +15,7 @@ function Player({ src, label }: { src: string; label: string }) {
         <Headphones size={15} />
         {label}
       </div>
+      {/* biome-ignore lint/a11y/useMediaCaption: The transcript and assistant reply are displayed as text in this entry. */}
       <audio key={src} controls preload="metadata" aria-label={label} src={src} />
     </div>
   );
@@ -22,7 +23,11 @@ function Player({ src, label }: { src: string; label: string }) {
 
 export function EntryDetail({ entry }: { entry: Entry }) {
   return (
-    <article className="panel detail" aria-label={`Обращение ${date(entry.startedAt)}, ${time(entry.startedAt)}`} data-entry-id={entry.id}>
+    <article
+      className="panel detail"
+      aria-label={`Обращение ${date(entry.startedAt)}, ${time(entry.startedAt)}`}
+      data-entry-id={entry.id}
+    >
       <div className="meta">
         <span>
           <CalendarDays />
@@ -36,7 +41,7 @@ export function EntryDetail({ entry }: { entry: Entry }) {
           <CircleUserRound />
           {entry.user.displayName}
         </span>
-        <span className={'status ' + entry.status}>{statusText(entry.status)}</span>
+        <span className={`status ${entry.status}`}>{statusText(entry.status)}</span>
       </div>
       {entry.inputAudio && <Player src={entry.inputAudio} label="Входящая запись" />}
       <section className="transcript">
@@ -83,10 +88,15 @@ export function EntryDetail({ entry }: { entry: Entry }) {
           ))}
         </section>
       )}
-      {entry.error && <>
-        <p className="error">Не удалось завершить обработку обращения.</p>
-        <details><summary>Технические подробности</summary><pre>{entry.error}</pre></details>
-      </>}
+      {entry.error && (
+        <>
+          <p className="error">Не удалось завершить обработку обращения.</p>
+          <details>
+            <summary>Технические подробности</summary>
+            <pre>{entry.error}</pre>
+          </details>
+        </>
+      )}
     </article>
   );
 }

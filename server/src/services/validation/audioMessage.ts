@@ -26,11 +26,15 @@ export function parseAudioMessage(data: Buffer, binary: boolean): AudioMessage {
 
   switch (result.error.issues[0]?.path[0]) {
     case 'deviceId':
-    case 'userId': throw new Error('Expected deviceId and userId as UUIDv7');
+    case 'userId':
+      throw new Error('Expected deviceId and userId as UUIDv7');
     case 'sampleRate':
     case 'channels':
-    case 'format': throw new Error('Expected mono s16le at 16000 or 20000 Hz');
-    case 'samples': throw new Error('Audio sample count mismatch');
-    default: throw new Error('Unknown message');
+    case 'format':
+      throw new Error('Expected mono s16le at 16000 or 20000 Hz');
+    case 'samples':
+      throw new Error('Audio sample count mismatch');
+    default:
+      throw new Error('Unknown message');
   }
 }

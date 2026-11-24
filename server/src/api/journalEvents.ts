@@ -1,7 +1,7 @@
-import type { PrismaClient } from '@prisma/client';
-import { getJournalEntry } from '../services/journal/journal.js';
-import type { FastifyInstance } from 'fastify';
 import type { ServerResponse } from 'node:http';
+import type { PrismaClient } from '@prisma/client';
+import type { FastifyInstance } from 'fastify';
+import { getJournalEntry } from '../services/journal/journal.js';
 
 export function createJournalEvents(db: PrismaClient, log: (message: string) => void) {
   const clients = new Set<ServerResponse>();

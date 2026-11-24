@@ -1,5 +1,5 @@
-import type { PrismaClient } from '@prisma/client';
 import { basename } from 'node:path';
+import type { PrismaClient } from '@prisma/client';
 import { AppError, diagnosticError } from '../../../shared/errors.js';
 
 export type ProcessingOptions = {
@@ -10,7 +10,9 @@ export type ProcessingOptions = {
   log?: (message: string) => void;
 };
 
-export type RecognitionEvent = { type: 'transcript'; text: string } | { type: 'transcription_error' | 'processing_error'; code: string; message: string };
+export type RecognitionEvent =
+  | { type: 'transcript'; text: string }
+  | { type: 'transcription_error' | 'processing_error'; code: string; message: string };
 type Notify = (event: RecognitionEvent) => void;
 
 export class InteractionProcessor {
@@ -25,7 +27,9 @@ export class InteractionProcessor {
     this.log = options.log ?? console.log;
   }
 
-  get pendingJobs() { return this.jobs; }
+  get pendingJobs() {
+    return this.jobs;
+  }
 
   enqueue(id: string, path: string, notify: Notify) {
     this.jobs++;
@@ -33,23 +37,31 @@ export class InteractionProcessor {
       .then(async () => {
         let transcribed = false;
         try {
-          await this.process(id, path, event => {
+          await this.process(id, path, (event) => {
             if (event.type === 'transcript') transcribed = true;
             notify(event);
           });
         } catch (error) {
           await this.fail(id, error);
           this.log(`Processing failed (WAV preserved): ${diagnosticError(error)}`);
-          notify({ type: transcribed ? 'processing_error' : 'transcription_error', code: error instanceof AppError ? error.code : 'internal_error', message: diagnosticError(error) });
+          notify({
+            type: transcribed ? 'processing_error' : 'transcription_error',
+            code: error instanceof AppError ? error.code : 'internal_error',
+            message: diagnosticError(error),
+          });
         } finally {
           await this.interactionUpdated(id);
         }
       })
-      .catch(error => this.log(`Failed to write journal: ${error}`))
-      .finally(() => { this.jobs--; });
+      .catch((error) => this.log(`Failed to write journal: ${error}`))
+      .finally(() => {
+        this.jobs--;
+      });
   }
 
-  drain() { return this.queue; }
+  drain() {
+    return this.queue;
+  }
 
   private async process(id: string, path: string, notify: Notify) {
     const { db, transcribe, synthesizeReply, generateReply } = this.options;
@@ -75,20 +87,30 @@ export class InteractionProcessor {
       } catch (error) {
         await this.fail(id, error);
         this.log(`Speech synthesis failed: ${diagnosticError(error)}`);
-        notify({ type: 'processing_error', code: error instanceof AppError ? error.code : 'internal_error', message: diagnosticError(error) });
+        notify({
+          type: 'processing_error',
+          code: error instanceof AppError ? error.code : 'internal_error',
+          message: diagnosticError(error),
+        });
         return;
       }
       outputAudioKey = basename(output);
       this.log(`Synthesized speech: ${output}`);
     }
     await db.interaction.update({
-      where, data: { status: 'complete', finishedAt: new Date(), outputAudioKey },
+      where,
+      data: { status: 'complete', finishedAt: new Date(), outputAudioKey },
     });
   }
 
   private fail(id: string, error: unknown) {
-    return this.options.db.interaction.update({ where: { id }, data: {
-      status: 'failed', error: diagnosticError(error), finishedAt: new Date(),
-    } });
+    return this.options.db.interaction.update({
+      where: { id },
+      data: {
+        status: 'failed',
+        error: diagnosticError(error),
+        finishedAt: new Date(),
+      },
+    });
   }
 }

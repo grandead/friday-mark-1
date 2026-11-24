@@ -1,5 +1,5 @@
-import type { PrismaClient } from '@prisma/client';
 import { basename, join } from 'node:path';
+import type { PrismaClient } from '@prisma/client';
 import { v7 as uuidv7 } from 'uuid';
 import type { InteractionProcessor, RecognitionEvent } from '../interactions/processor.js';
 import type { AudioMessage } from '../validation/audioMessage.js';
@@ -37,8 +37,10 @@ export class RecordingSession {
       return;
     }
     switch (message.type) {
-      case 'start': return this.start(message);
-      case 'end': return this.finish(message.samples);
+      case 'start':
+        return this.start(message);
+      case 'end':
+        return this.finish(message.samples);
       case 'abort':
         await this.abort('ESP32 reported lost samples');
         this.notify({ type: 'aborted' });
@@ -49,9 +51,15 @@ export class RecordingSession {
     const active = this.takeRecording();
     if (!active) return;
     const path = active.wav.finish(false);
-    await this.options.db.interaction.update({ where: { id: active.id }, data: {
-      status: 'incomplete', inputAudioKey: basename(path), error: reason, finishedAt: new Date(),
-    } });
+    await this.options.db.interaction.update({
+      where: { id: active.id },
+      data: {
+        status: 'incomplete',
+        inputAudioKey: basename(path),
+        error: reason,
+        finishedAt: new Date(),
+      },
+    });
     this.options.log(`Incomplete recording: ${path} (${reason})`);
   }
 
@@ -61,16 +69,27 @@ export class RecordingSession {
     const { db, recordingsDir, log } = this.options;
     const id = uuidv7();
     const startedAt = new Date();
-    const base = startedAt.toISOString().replace(/[:.]/g, '-') + '-' + id;
+    const base = `${startedAt.toISOString().replace(/[:.]/g, '-')}-${id}`;
     try {
       await db.$transaction([
         db.device.update({ where: { id: deviceId }, data: { lastSeenAt: startedAt } }),
-        db.interaction.create({ data: {
-          id, deviceId, userId, startedAt, status: 'recording', inputAudioKey: base + '.partial',
-        } }),
+        db.interaction.create({
+          data: {
+            id,
+            deviceId,
+            userId,
+            startedAt,
+            status: 'recording',
+            inputAudioKey: `${base}.partial`,
+          },
+        }),
       ]);
     } catch (error) {
-      if (error instanceof Error && 'code' in error && ['P2003', 'P2025'].includes(String(error.code))) {
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        ['P2003', 'P2025'].includes(String(error.code))
+      ) {
         throw new Error('Unregistered deviceId or userId');
       }
       throw error;
@@ -78,7 +97,10 @@ export class RecordingSession {
     try {
       this.active = { id, wav: new Recording(join(recordingsDir, base), sampleRate) };
     } catch (error) {
-      await db.interaction.update({ where: { id }, data: { status: 'failed', error: String(error), finishedAt: new Date() } });
+      await db.interaction.update({
+        where: { id },
+        data: { status: 'failed', error: String(error), finishedAt: new Date() },
+      });
       throw error;
     }
     this.resetIdleTimer();
@@ -94,7 +116,10 @@ export class RecordingSession {
     if (!wav.bytes) throw new Error('Empty recording');
     this.takeRecording();
     const path = wav.finish(true);
-    await this.options.db.interaction.update({ where: { id }, data: { status: 'processing', inputAudioKey: basename(path) } });
+    await this.options.db.interaction.update({
+      where: { id },
+      data: { status: 'processing', inputAudioKey: basename(path) },
+    });
     this.options.log(`WAV saved (${(samples / wav.sampleRate).toFixed(2)} s): ${path}`);
     this.notify({ type: 'saved', samples });
     this.options.processor.enqueue(id, path, this.notify);

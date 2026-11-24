@@ -1,15 +1,27 @@
-import { userError } from '../lib/errors';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getJson, type Entry, type JournalPage } from '../lib/journal';
+import { userError } from '../lib/errors';
+import { type Entry, getJson, type JournalPage } from '../lib/journal';
 
 function compareEntries(a: Entry, b: Entry) {
   return b.startedAt.localeCompare(a.startedAt) || b.id.localeCompare(a.id);
 }
 
-type FeedState = { items: Entry[]; loading: boolean; hasMore: boolean; error: string; reconnecting: boolean };
+type FeedState = {
+  items: Entry[];
+  loading: boolean;
+  hasMore: boolean;
+  error: string;
+  reconnecting: boolean;
+};
 
 export function useJournal(query: string) {
-  const [state, setState] = useState<FeedState>({ items: [], loading: true, hasMore: false, error: '', reconnecting: false });
+  const [state, setState] = useState<FeedState>({
+    items: [],
+    loading: true,
+    hasMore: false,
+    error: '',
+    reconnecting: false,
+  });
   const more = useRef<() => void>(() => {});
   const loadMore = useCallback(() => more.current(), []);
 
@@ -26,7 +38,11 @@ export function useJournal(query: string) {
 
     function publish() {
       if (!controller.signal.aborted) {
-        setState(s => ({ ...s, items: [...entries.values()].sort(compareEntries), hasMore: Boolean(cursor) }));
+        setState((s) => ({
+          ...s,
+          items: [...entries.values()].sort(compareEntries),
+          hasMore: Boolean(cursor),
+        }));
       }
     }
 
@@ -38,7 +54,7 @@ export function useJournal(query: string) {
       if (!refresh && initialized && !cursor) return;
       busy = true;
       changedDuringRequest = new Set();
-      setState(s => ({ ...s, loading: true, error: '' }));
+      setState((s) => ({ ...s, loading: true, error: '' }));
       const oldest = [...entries.values()].sort(compareEntries).at(-1);
       let next = refresh ? null : cursor;
       const fetched: Entry[] = [];
@@ -66,11 +82,11 @@ export function useJournal(query: string) {
         publish();
       } catch (error) {
         retryRefresh = refresh;
-        if (!controller.signal.aborted) setState(s => ({ ...s, error: userError(error) }));
+        if (!controller.signal.aborted) setState((s) => ({ ...s, error: userError(error) }));
       } finally {
         busy = false;
         if (!controller.signal.aborted) {
-          setState(s => ({ ...s, loading: false }));
+          setState((s) => ({ ...s, loading: false }));
           if (refreshPending) {
             refreshPending = false;
             void load(true);
@@ -79,24 +95,29 @@ export function useJournal(query: string) {
       }
     }
 
-    more.current = () => { void load(retryRefresh || !initialized); };
+    more.current = () => {
+      void load(retryRefresh || !initialized);
+    };
     const events = new EventSource('/api/journal/events');
     events.onopen = () => {
-      setState(s => ({ ...s, reconnecting: false }));
+      setState((s) => ({ ...s, reconnecting: false }));
       void load(true);
     };
     events.onerror = () => {
-      setState(s => ({ ...s, reconnecting: true }));
+      setState((s) => ({ ...s, reconnecting: true }));
     };
-    events.addEventListener('interactionUpdated', event => {
+    events.addEventListener('interactionUpdated', (event) => {
       const item: Entry = JSON.parse(event.data);
       const deviceId = filters.get('deviceId');
       const userId = filters.get('userId');
       const from = filters.get('from');
       const to = filters.get('to');
       const timestamp = Date.parse(item.startedAt);
-      const matches = (!deviceId || item.deviceId === deviceId) && (!userId || item.userId === userId)
-        && (!from || timestamp >= Date.parse(from)) && (!to || timestamp <= Date.parse(to));
+      const matches =
+        (!deviceId || item.deviceId === deviceId) &&
+        (!userId || item.userId === userId) &&
+        (!from || timestamp >= Date.parse(from)) &&
+        (!to || timestamp <= Date.parse(to));
       if (!matches) return;
       const oldest = [...entries.values()].sort(compareEntries).at(-1);
       if (cursor && oldest && compareEntries(item, oldest) > 0 && !entries.has(item.id)) return;

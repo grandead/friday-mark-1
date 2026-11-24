@@ -1,4 +1,4 @@
-import { type ErrorCode } from './errors.js';
+import type { ErrorCode } from './errors.js';
 
 // User-facing messages only; diagnostics and persisted error fields stay English.
 export const userErrors: Record<ErrorCode, string> = {
@@ -6,9 +6,11 @@ export const userErrors: Record<ErrorCode, string> = {
   hardware_unknown: 'Прибор не подтвердил наличие нужного оборудования.',
   unsupported: 'Эта настройка недоступна на данном приборе.',
   not_confirmed: 'Прибор не подтвердил запрошенную настройку.',
-  device_unreachable: 'Не удалось получить ответ от прибора. Проверьте питание, сеть и данные подключения.',
+  device_unreachable:
+    'Не удалось получить ответ от прибора. Проверьте питание, сеть и данные подключения.',
   invalid_device_state: 'Не удалось прочитать состояние прибора. Попробуйте ещё раз.',
-  invalid_miio_registration: 'Укажите корректный IPv4-адрес и токен из 32 шестнадцатеричных символов.',
+  invalid_miio_registration:
+    'Укажите корректный IPv4-адрес и токен из 32 шестнадцатеричных символов.',
   invalid_hommyn_registration: 'Укажите ссылку «Поделиться» из HOMMYN, содержащую токен доступа.',
   invalid_form: 'Проверьте поля формы. Название должно содержать от 1 до 120 символов.',
   entity_not_found: 'Дом, комната или модель больше недоступны. Обновите страницу.',
@@ -23,7 +25,8 @@ export const userErrors: Record<ErrorCode, string> = {
   llm_unavailable: 'Не удалось связаться с языковой моделью. Попробуйте позже.',
   llm_http_error: 'Языковая модель не смогла обработать запрос. Попробуйте ещё раз.',
   invalid_llm_reply: 'Не удалось получить корректный ответ. Повторите запрос.',
-  invalid_reply_language: 'Не удалось сформулировать ответ на русском. Повторите запрос, пожалуйста.',
+  invalid_reply_language:
+    'Не удалось сформулировать ответ на русском. Повторите запрос, пожалуйста.',
   llm_reply_too_long: 'Ответ получился слишком длинным. Попробуйте уточнить запрос.',
   tools_not_allowed: 'В этом запросе управление устройствами недоступно.',
   tools_not_configured: 'Управление умным домом пока не подключено.',

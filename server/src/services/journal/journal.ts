@@ -1,5 +1,5 @@
-import type { Prisma, PrismaClient } from '@prisma/client';
 import { basename } from 'node:path';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import type { JournalQuery } from '../validation/journal.js';
 
 export function listDevices(db: PrismaClient) {
@@ -17,16 +17,29 @@ export function listUsers(db: PrismaClient) {
 }
 
 const entrySelect = {
-  id: true, deviceId: true, userId: true, startedAt: true, status: true,
-  transcript: true, responseText: true, responseSource: true, error: true,
-  inputAudioKey: true, outputAudioKey: true,
+  id: true,
+  deviceId: true,
+  userId: true,
+  startedAt: true,
+  status: true,
+  transcript: true,
+  responseText: true,
+  responseSource: true,
+  error: true,
+  inputAudioKey: true,
+  outputAudioKey: true,
   device: { select: { id: true, displayName: true } },
   user: { select: { id: true, displayName: true } },
   actions: {
     orderBy: { sequence: 'asc' },
     select: {
-      id: true, initiator: true, service: true, operation: true,
-      arguments: true, result: true, error: true,
+      id: true,
+      initiator: true,
+      service: true,
+      operation: true,
+      arguments: true,
+      result: true,
+      error: true,
     },
   },
 } satisfies Prisma.InteractionSelect;
@@ -51,15 +64,19 @@ export async function listInteractions(db: PrismaClient, query: JournalQuery) {
   const { deviceId, userId, from, to, before, beforeId, page } = query;
   const pageSize = 15;
   const where: Prisma.InteractionWhereInput = {
-    deviceId, userId,
+    deviceId,
+    userId,
     startedAt: { gte: from ? new Date(from) : undefined, lte: to ? new Date(to) : undefined },
   };
-  const cursor: Prisma.InteractionWhereInput = before && beforeId ? {
-    OR: [
-      { startedAt: { lt: new Date(before) } },
-      { startedAt: new Date(before), id: { lt: beforeId } },
-    ],
-  } : {};
+  const cursor: Prisma.InteractionWhereInput =
+    before && beforeId
+      ? {
+          OR: [
+            { startedAt: { lt: new Date(before) } },
+            { startedAt: new Date(before), id: { lt: beforeId } },
+          ],
+        }
+      : {};
   const [total, rows] = await db.$transaction([
     db.interaction.count({ where }),
     db.interaction.findMany({
@@ -73,13 +90,16 @@ export async function listInteractions(db: PrismaClient, query: JournalQuery) {
   const items = rows.slice(0, pageSize).map(serializeEntry);
   const last = items.at(-1);
   return {
-    page, pageSize, total, items,
+    page,
+    pageSize,
+    total,
+    items,
     nextCursor: rows.length > pageSize && last ? { startedAt: last.startedAt, id: last.id } : null,
   };
 }
 
 function audioUrl(id: string, kind: 'input' | 'output', key: string | null) {
-  return key && key.endsWith('.wav') ? `/api/interactions/${id}/audio/${kind}` : null;
+  return key?.endsWith('.wav') ? `/api/interactions/${id}/audio/${kind}` : null;
 }
 
 export async function audioKey(db: PrismaClient, id: string, kind: 'input' | 'output') {

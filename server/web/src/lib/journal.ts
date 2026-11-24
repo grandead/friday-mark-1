@@ -1,5 +1,9 @@
+import type {
+  listDevices,
+  listInteractions,
+  listUsers,
+} from '../../../src/services/journal/journal';
 import { requestError } from './errors';
-import type { listDevices, listInteractions, listUsers } from '../../../src/services/journal/journal';
 
 export type User = Awaited<ReturnType<typeof listUsers>>[number];
 export type Device = Awaited<ReturnType<typeof listDevices>>[number];
