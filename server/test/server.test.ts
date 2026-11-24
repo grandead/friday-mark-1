@@ -127,6 +127,9 @@ test('HTTP health tracks the same in-flight transcription as the audio socket', 
     failRecognition(new Error('recognizer unavailable'));
   }
   await until(() => messages.some(message => message.type === 'transcription_error'));
+  const failure = messages.find(message => message.type === 'transcription_error');
+  assert.equal(failure.code, 'internal_error');
+  assert.doesNotMatch(failure.message, /[А-Яа-яЁё]/);
   await until(async () => (await health()).transcriptionJobs === 0);
   const row = await db.interaction.findFirstOrThrow();
   assert.equal(row.status, 'failed');

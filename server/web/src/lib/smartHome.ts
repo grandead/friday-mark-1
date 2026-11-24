@@ -1,3 +1,4 @@
+import { requestError } from './errors';
 export type HomeDevice = { id: string; roomId: string; typeId: string; displayName: string };
 export type Room = { id: string; homeId: string; displayName: string; devices: HomeDevice[] };
 export type Home = { id: string; displayName: string; rooms: Room[] };
@@ -8,7 +9,6 @@ export async function homeRequest<T>(url: string, body?: unknown, signal?: Abort
   const response = await fetch(url, { signal, ...(body === undefined ? {} : {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   }) });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.message ?? 'Не удалось выполнить запрос');
-  return data;
+  if (!response.ok) throw await requestError(response);
+  return response.json();
 }

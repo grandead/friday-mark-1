@@ -12,7 +12,8 @@ import type { DeviceCommand } from '../src/services/smartHome/driver.js';
 
 const database = await createTestDatabase();
 const db = database.db;
-const balluOnly = process.argv.includes('--ballu-only');
+const safetyOnly = process.argv.includes('--safety-only');
+const balluOnly = process.argv.includes('--ballu-only') || safetyOnly;
 const basicOnly = process.argv.includes('--basic-only');
 try {
   const types = await db.homeDeviceType.findMany();
@@ -86,7 +87,7 @@ try {
     ['Выключи фоновую мелодию на бризере в спальне Артёма', 'sound', 'sound', 'off'],
     ['Я заменил основной фильтр бризера в спальне Артёма. Сбрось его счётчик', 'resetFilter', 'operation', 'resetFilter'],
   ];
-  for (const [transcript, operation, field, expected] of (basicOnly ? [] : balluCases)) {
+  for (const [transcript, operation, field, expected] of (basicOnly || safetyOnly ? [] : balluCases)) {
     calls.length = 0;
     const row = await db.interaction.create({ data: { userId, deviceId, status: 'processing', inputAudioKey: randomUUID() + '.wav' } });
     const reply = await assistant(row.id, transcript);
@@ -107,6 +108,15 @@ try {
     const reply = await assistant(row.id, transcript);
     console.log(JSON.stringify({ unsupported: transcript, reply, operations: calls.map(c => c.operation) }));
     assert.equal(calls.length, 0, 'Unsupported request must not be replaced with a different setting');
+  }
+  for (const transcript of ['Поздоровайся со мной одним предложением.', 'Please answer in English: say hello in one short sentence.']) {
+    calls.length = 0;
+    const row = await db.interaction.create({ data: { userId, deviceId, status: 'processing', inputAudioKey: randomUUID() + '.wav' } });
+    const reply = await assistant(row.id, transcript);
+    console.log(JSON.stringify({ languageCheck: transcript, reply }));
+    assert.equal(calls.length, 0);
+    assert.match(reply, /[А-Яа-яЁё]/, 'Spoken replies must stay Russian even when the user requests English');
+    assert.doesNotMatch(reply, /\b(hello|good morning)\b/i);
   }
   calls.length = 0;
   const question = await db.interaction.create({ data: { userId, deviceId, status: 'processing', inputAudioKey: randomUUID() + '.wav' } });

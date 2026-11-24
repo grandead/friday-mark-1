@@ -27,11 +27,11 @@ npm start
 Сервер слушает **порт из `server/.env`** (по умолчанию `33000`) и печатает доступные IPv4-адреса Mac:
 
 ```text
-Адрес для ESP32: ws://mac-host.local:33000/audio
+ESP32 endpoint: ws://mac-host.local:33000/audio
 ● RECORD ...
-■ WAV сохранён (6.08 с): .../recordings/....wav
-Распознаю…
-Текст: Привет, это проверка записи звука.
+WAV saved (6.08 s): .../recordings/....wav
+Transcribing audio...
+Transcript: Привет, это проверка записи звука.
 ```
 
 Остановка: **Ctrl+C**. Закрытие соединения во время записи сохраняет неполный WAV.
@@ -339,3 +339,29 @@ npm run test:assistant -- /absolute/path/question.wav
 Она использует настоящий STT, LLM и TTS, проверяет журнал и выдачу WAV через HTTP.
 История хранится во временной схеме БД, тестовые записи удаляются после проверки.
 Увлажнитель в этой проверке не подключается.
+
+## Language boundaries
+
+System identifiers, log prefixes and diagnostics are English. LLM system instructions,
+tool/parameter descriptions, UI labels and spoken replies are Russian. JSON keys,
+tool names and enum values remain stable English API identifiers. `shared/errors.ts` defines stable error codes and English messages;
+`shared/userErrors.ru.ts` contains their Russian user-facing equivalents.
+API errors return `{ code, message }`; the web UI selects safe Russian copy by code,
+including a Russian fallback for network failures and unknown server responses.
+Device failures store an English diagnostic in `error` and a separate Russian spoken
+reply in `result.reply`. An unconfirmed device response is marked `confirmed: false`;
+it does not prove that the physical action did not happen.
+Technical JSON keys in the journal are English. UI labels, assistant replies and TTS
+remain Russian. The system prompt explicitly requires Russian even when the user
+requests another language. Clearly foreign text-only replies (letters but no Russian
+characters) get one additional Russian reformulation call, without any tools. This
+is recorded as `translate_reply`. A failed repair returns a fixed Russian message;
+it never retries device commands. Numeric answers are allowed without repair.
+This script check does not classify mixed-language text; the prompt still governs it.
+Russian examples in prompts/tests and user-owned data
+(names, transcripts and conversation history) are preserved verbatim.
+Existing journal entries are not rewritten and no database migration is required.
+
+Run `npm test`, `npm run check` and `npm run web:build` for contract checks.
+`npm run test:home` checks the real Ollama model with simulated devices, including
+Russian replies to Russian and English user requests. It never controls physical devices.

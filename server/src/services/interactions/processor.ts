@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { basename } from 'node:path';
+import { AppError, diagnosticError } from '../../../shared/errors.js';
 
 export type ProcessingOptions = {
   db: PrismaClient;
@@ -9,7 +10,7 @@ export type ProcessingOptions = {
   log?: (message: string) => void;
 };
 
-export type RecognitionEvent = { type: 'transcript'; text: string } | { type: 'transcription_error' | 'processing_error'; message: string };
+export type RecognitionEvent = { type: 'transcript'; text: string } | { type: 'transcription_error' | 'processing_error'; code: string; message: string };
 type Notify = (event: RecognitionEvent) => void;
 
 export class InteractionProcessor {
@@ -38,13 +39,13 @@ export class InteractionProcessor {
           });
         } catch (error) {
           await this.fail(id, error);
-          this.log(`Ошибка обработки (WAV сохранён): ${error}`);
-          notify({ type: transcribed ? 'processing_error' : 'transcription_error', message: String(error) });
+          this.log(`Processing failed (WAV preserved): ${diagnosticError(error)}`);
+          notify({ type: transcribed ? 'processing_error' : 'transcription_error', code: error instanceof AppError ? error.code : 'internal_error', message: diagnosticError(error) });
         } finally {
           await this.interactionUpdated(id);
         }
       })
-      .catch(error => this.log(`Ошибка записи журнала: ${error}`))
+      .catch(error => this.log(`Failed to write journal: ${error}`))
       .finally(() => { this.jobs--; });
   }
 
@@ -53,16 +54,16 @@ export class InteractionProcessor {
   private async process(id: string, path: string, notify: Notify) {
     const { db, transcribe, synthesizeReply, generateReply } = this.options;
     const where = { id };
-    this.log('Распознаю…');
+    this.log('Transcribing audio...');
     const text = await transcribe(path);
     await db.interaction.update({ where, data: { transcript: text } });
-    this.log(`\nТекст: ${text || '(речь не распознана)'}\n`);
+    this.log(`\nTranscript: ${text || '(no speech recognized)'}\n`);
     notify({ type: 'transcript', text });
 
     let reply: string | undefined;
     let outputAudioKey: string | undefined;
     if (text.trim() && generateReply) {
-      this.log('Пятница думает…');
+      this.log('Generating assistant response...');
       reply = await generateReply(id, text);
       await db.interaction.update({ where, data: { responseText: reply, responseSource: 'llm' } });
     }
@@ -73,12 +74,12 @@ export class InteractionProcessor {
         await synthesizeReply(reply, output);
       } catch (error) {
         await this.fail(id, error);
-        this.log(`Ошибка синтеза речи: ${error}`);
-        notify({ type: 'processing_error', message: String(error) });
+        this.log(`Speech synthesis failed: ${diagnosticError(error)}`);
+        notify({ type: 'processing_error', code: error instanceof AppError ? error.code : 'internal_error', message: diagnosticError(error) });
         return;
       }
       outputAudioKey = basename(output);
-      this.log(`Голос Пятницы: ${output}`);
+      this.log(`Synthesized speech: ${output}`);
     }
     await db.interaction.update({
       where, data: { status: 'complete', finishedAt: new Date(), outputAudioKey },
@@ -87,7 +88,7 @@ export class InteractionProcessor {
 
   private fail(id: string, error: unknown) {
     return this.options.db.interaction.update({ where: { id }, data: {
-      status: 'failed', error: String(error), finishedAt: new Date(),
+      status: 'failed', error: diagnosticError(error), finishedAt: new Date(),
     } });
   }
 }

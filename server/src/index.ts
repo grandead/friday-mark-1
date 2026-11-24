@@ -26,14 +26,14 @@ const app = await buildApp({
   synthesizeReply: (text, output) => synthesizeReply(text, output, shutdown.signal),
 });
 await app.listen({ host: '0.0.0.0', port });
-console.log(`Friday готов. WAV и текст: ${join(root, 'recordings')}`);
+console.log(`Friday ready. Recordings directory: ${join(root, 'recordings')}`);
 for (const addresses of Object.values(networkInterfaces())) {
   for (const address of addresses ?? []) {
-    if (address.family === 'IPv4' && !address.internal) console.log(`Адрес для ESP32: ws://${address.address}:${port}/audio`);
+    if (address.family === 'IPv4' && !address.internal) console.log(`ESP32 endpoint: ws://${address.address}:${port}/audio`);
   }
 }
-console.log('Распознавание:', speech.recognizer);
-console.log('LLM:', llm.model, 'через', llmConfig.baseUrl);
-console.log('Скажи «Пятница» и команду. Полторы секунды тишины завершают запись. Ручная запись — удержанием сенсора.');
+console.log('Speech recognizer:', speech.recognizer);
+console.log('LLM:', llm.model, 'via', llmConfig.baseUrl);
+console.log('Say the wake word followed by a command. Recording ends after 1.5 seconds of silence. Hold the touch sensor to record manually.');
 const stop = async () => { shutdown.abort(); await app.close(); await db.$disconnect(); process.exit(0); };
 process.once('SIGINT', stop); process.once('SIGTERM', stop);

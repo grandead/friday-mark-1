@@ -1,3 +1,4 @@
+import { errorResponse } from '../../shared/errors.js';
 import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
@@ -10,12 +11,11 @@ const roomInput = z.strictObject({ homeId: z.uuidv7(), displayName: name });
 
 export async function smartHomeRoutes(app: FastifyInstance, { db }: { db: PrismaClient }) {
   app.setErrorHandler((error: Error & { code?: string; statusCode?: number }, _request, reply) => {
-    if (error instanceof RegistrationDataError) return reply.code(400).send({ message: error.registrationType === 'miioToken'
-      ? 'Укажите корректный IPv4-адрес и токен из 32 шестнадцатеричных символов.'
-      : 'Укажите ссылку «Поделиться» из HOMMYN, содержащую токен доступа.' });
-    if (error instanceof z.ZodError || error.statusCode === 400) return reply.code(400).send({ message: 'Проверьте поля формы. Название должно содержать от 1 до 120 символов.' });
-    if (error.code === 'P2025' || error.code === 'P2003') return reply.code(404).send({ message: 'Дом, комната или модель больше недоступны. Обновите страницу.' });
-    return reply.code(500).send({ message: 'Не удалось выполнить запрос. Попробуйте ещё раз.' });
+    if (error instanceof RegistrationDataError) return reply.code(400).send(errorResponse(
+      error.registrationType === 'miioToken' ? 'invalid_miio_registration' : 'invalid_hommyn_registration'));
+    if (error instanceof z.ZodError || error.statusCode === 400) return reply.code(400).send(errorResponse('invalid_form'));
+    if (error.code === 'P2025' || error.code === 'P2003') return reply.code(404).send(errorResponse('entity_not_found'));
+    return reply.code(500).send(errorResponse('internal_error'));
   });
   app.get('/api/smart-home', async () => {
     const [homes, deviceTypes] = await Promise.all([

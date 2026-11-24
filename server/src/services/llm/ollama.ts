@@ -1,3 +1,4 @@
+import { AppError } from '../../../shared/errors.js';
 import { ollamaReply } from '../validation/llm.js';
 import type { LanguageModel } from './types.js';
 
@@ -28,19 +29,20 @@ export function createOllama(options: OllamaOptions): LanguageModel {
         });
         body = await response.json();
       } catch (error) {
-        if (shutdown.aborted) throw new Error('Обработка остановлена вместе с сервером');
-        if (signal.aborted) throw new Error(`Ollama не ответила за ${timeoutMs / 1000} с`);
-        throw new Error(`Не удалось получить ответ Ollama (${endpoint.origin})`, { cause: error });
+        if (shutdown.aborted) throw new AppError('processing_stopped');
+        if (signal.aborted) throw new AppError('llm_timeout', `Ollama did not respond within ${timeoutMs} ms.`);
+        throw new AppError('llm_unavailable', `Failed to obtain an Ollama response (${endpoint.origin}).`, { cause: error });
       }
       if (!response.ok) {
         const detail = typeof body === 'object' && body && 'error' in body ? String(body.error).slice(0, 300) : '';
-        throw new Error(`Ollama HTTP ${response.status}${detail ? ': ' + detail : ''}`);
+        throw new AppError('llm_http_error', `Ollama HTTP ${response.status}${detail ? ': ' + detail : ''}`);
       }
+      // Thinking can exhaust the budget before producing any content/tool call.
+      if (body && typeof body === 'object' && 'done_reason' in body && body.done_reason === 'length') throw new AppError('llm_reply_too_long');
       const parsed = ollamaReply.safeParse(body);
-      if (!parsed.success) throw new Error('Ollama вернула пустой или некорректный ответ');
+      if (!parsed.success) throw new AppError('invalid_llm_reply');
       const reply = parsed.data;
-      if (reply.done_reason === 'length') throw new Error('Ответ Ollama превысил лимит длины');
-      if (reply.message.tool_calls?.length && !tools?.length) throw new Error('Вызов инструментов не разрешён в этом запросе');
+      if (reply.message.tool_calls?.length && !tools?.length) throw new AppError('tools_not_allowed');
       return {
         text: reply.message.content, toolCalls: reply.message.tool_calls, model: reply.model,
         durationMs: Math.round(performance.now() - started),

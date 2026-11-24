@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { balluModes, balluSounds } from './ballu.js';
+import { AppError, errorMessages } from '../../../shared/errors.js';
 
 export type DeviceCommand = {
   model: string; registrationData: unknown;
@@ -9,13 +10,15 @@ export type DeviceCommand = {
   power?: boolean; mode?: typeof balluModes[number]; speed?: number; temperature?: number; enabled?: boolean; sound?: typeof balluSounds[number];
 };
 export const deviceErrors = {
-  heater_missing: 'У прибора не установлен нагреватель.',
-  hardware_unknown: 'Прибор не подтвердил наличие нужного оборудования.',
-  unsupported: 'Эта настройка недоступна на данном приборе.',
-  not_confirmed: 'Прибор не подтвердил запрошенную настройку.',
+  heater_missing: errorMessages.heater_missing,
+  hardware_unknown: errorMessages.hardware_unknown,
+  unsupported: errorMessages.unsupported,
+  not_confirmed: errorMessages.not_confirmed,
+  device_unreachable: errorMessages.device_unreachable,
+  invalid_device_state: errorMessages.invalid_device_state,
 } as const;
-export class DeviceCommandError extends Error {
-  constructor(readonly code: keyof typeof deviceErrors) { super(deviceErrors[code]); }
+export class DeviceCommandError extends AppError {
+  constructor(readonly code: keyof typeof deviceErrors) { super(code); }
 }
 export const deviceState = z.strictObject({
   power: z.boolean(),
@@ -50,9 +53,9 @@ export function runDeviceCommand(command: DeviceCommand, signal?: AbortSignal): 
       if (body && typeof body === 'object' && 'error' in body && typeof body.error === 'string' && Object.hasOwn(deviceErrors, body.error)) {
         return reject(new DeviceCommandError(body.error as keyof typeof deviceErrors));
       }
-      if (error) return reject(new Error('Не удалось получить подтверждение от прибора. Проверьте питание, сеть и данные подключения.'));
+      if (error) return reject(new DeviceCommandError('device_unreachable'));
       try { resolve(deviceState.parse(body)); }
-      catch { reject(new Error('Прибор не вернул корректное состояние.')); }
+      catch { reject(new DeviceCommandError('invalid_device_state')); }
     });
     child.stdin?.on('error', () => {});
     child.stdin?.end(JSON.stringify(command));

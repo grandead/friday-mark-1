@@ -1,3 +1,4 @@
+import { userError } from '../lib/errors';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Cpu, Users, X } from 'lucide-react';
 import { EntryList } from '../components/EntryList';
@@ -37,7 +38,7 @@ export function Journal() {
       getJson<User[]>('/api/users', request.signal),
     ]).then(([devices, users]) => {
       if (!request.signal.aborted) { setDevices(devices); setUsers(users); }
-    }).catch(error => { if (!request.signal.aborted) setError(error.message); });
+    }).catch(error => { if (!request.signal.aborted) setError(userError(error)); });
     return () => request.abort();
   }, [retry]);
 
@@ -67,7 +68,7 @@ export function Journal() {
           </div>
           {hasFilters && <button className="clear-filters" aria-label="Сбросить фильтры" title="Сбросить фильтры" onClick={() => { setDevice(''); setUser(''); setFrom(''); setTo(''); }}><X size={17} /></button>}
         </div>
-        {error && <div className="notice error" role="alert">Не удалось загрузить фильтры: {error}. <button className="retry" onClick={() => setRetry(v => v + 1)}>Повторить</button></div>}
+        {error && <div className="notice error" role="alert">Не удалось загрузить фильтры. {error} <button className="retry" onClick={() => setRetry(v => v + 1)}>Повторить</button></div>}
         {invalidDates ? <p className="notice error" role="alert">Начало периода должно быть раньше его окончания.</p> : <EntryList key={query.toString()} query={query.toString()} />}
       </main>
     </>

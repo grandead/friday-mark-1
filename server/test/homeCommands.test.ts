@@ -44,6 +44,10 @@ test('home commands resolve rooms and homes, validate arguments, confirm power a
   const actions = await db.interactionAction.findMany({ where: { interactionId: interaction.id } });
   assert.ok(!JSON.stringify(actions).includes(secret));
   assert.equal(actions.filter(action => action.error).length, 2);
+  for (const action of actions.filter(action => action.error)) {
+    assert.doesNotMatch(action.error!, /[А-Яа-яЁё]/);
+    assert.match((action.result as { reply: string }).reply, /[А-Яа-яЁё]/);
+  }
   const other = await db.home.create({ data: { displayName: 'Дача', rooms: { create: { displayName: 'Родительская', devices: { create: { typeId: type.id, displayName: 'Бризер', registrationData: { ip: '192.168.1.20', token: secret } } } } } } });
   assert.ok(other.id);
   fail = false;
@@ -81,6 +85,7 @@ test('assistant executes multiple device commands and reports verified partial o
   assert.match(first.reply, /выключен/);
   assert.ok(!first.reply.includes('Непроверенное'));
   assert.ok(definitions?.some(tool => tool.function.name === 'set_ballu_mode'));
+  for (const tool of definitions!) assert.match(tool.function.description, /[А-Яа-яЁё]/);
   assert.match(messages[0].content, /Родительская/);
   assert.ok(!JSON.stringify(messages).includes(secret));
   const actions = await db.interactionAction.findMany({ where: { interactionId: first.id }, orderBy: { sequence: 'asc' } });
@@ -102,7 +107,7 @@ test('assistant executes multiple device commands and reports verified partial o
     assert.match(partial.reply, failed === 'smartmi-fresh-air' ? /Увлажнитель.*выключен/ : /Бризер.*включён/);
     const recorded = await db.interactionAction.findMany({ where: { interactionId: partial.id, service: 'smartHome' }, orderBy: { sequence: 'asc' } });
     assert.equal(recorded.filter(a => a.error).length, 1);
-    assert.equal(recorded.filter(a => a.result).length, 1);
+    assert.equal(recorded.filter(a => a.result && !a.error).length, 1);
     assert.ok(!JSON.stringify(recorded).includes(secret));
     assert.ok(!partial.reply.includes(secret));
   }

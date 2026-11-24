@@ -61,11 +61,11 @@ def prepare():
 
 def serve(bind):
     if not (KEYS / 'key.pem').exists():
-        raise SystemExit('Сначала собери и установи прошивку с OTA по USB.')
+        raise SystemExit('Build and flash OTA-enabled firmware over USB first.')
     image = (ROOT / 'build/friday_firmware.bin').read_bytes()
     digest = hashlib.sha256(image[:-32]).digest()
     if image[:1] != b'\xe9' or image[-32:] != digest:
-        raise SystemExit('Повреждён образ ESP-IDF. Повтори сборку.')
+        raise SystemExit('Invalid ESP-IDF image. Rebuild the firmware.')
     expected = digest.hex()
     token = 'Bearer ' + (KEYS / 'token').read_text().strip()
     confirmed = False
@@ -89,7 +89,7 @@ def serve(bind):
                 self.send_response(304)
                 self.end_headers()
                 confirmed = True
-                print(f'ESP32 {self.client_address[0]} подтвердила образ {expected[:12]}.', flush=True)
+                print(f'ESP32 {self.client_address[0]} confirmed image {expected[:12]}.', flush=True)
                 return
             if sent:
                 previous_boot = True
@@ -105,7 +105,7 @@ def serve(bind):
             for offset in range(0, len(image), 16 * 1024):
                 self.wfile.write(image[offset:offset + 16 * 1024])
             sent = True
-            print('Образ передан. Жду подтверждения после перезагрузки.', flush=True)
+            print('Image transferred. Waiting for confirmation after reboot.', flush=True)
 
         def log_message(self, fmt, *args):
             pass
@@ -126,14 +126,14 @@ def serve(bind):
 
     with Server((bind, PORT), Update) as server:
         server.timeout = 1
-        print(f'OTA готов на порту {PORT}. Нажми EN на ESP32. Образ {expected[:12]}.', flush=True)
+        print(f'OTA ready on port {PORT}. Press EN on the ESP32. Image {expected[:12]}.', flush=True)
         deadline = time.monotonic() + 180
         while not (confirmed or previous_boot) and time.monotonic() < deadline:
             server.handle_request()
     if previous_boot:
-        raise SystemExit('Плата вернулась с прежним образом. Для повторной попытки запусти команду заново.')
+        raise SystemExit('The board booted the previous image. Run the command again to retry.')
     if not confirmed:
-        raise SystemExit('ESP32 не подтвердила запуск образа в течение 3 минут.')
+        raise SystemExit('ESP32 did not confirm the running image within 3 minutes.')
 
 
 if __name__ == '__main__':

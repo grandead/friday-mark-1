@@ -42,10 +42,11 @@ test('Ollama requests bounded non-thinking chat and exposes only the spoken answ
 
 for (const [name, status, body, error] of [
   ['missing model', 404, { error: 'model not found' }, /HTTP 404.*model not found/],
-  ['empty answer', 200, { ...reply, message: { content: '' } }, /пустой или некорректный/],
-  ['unfinished answer', 200, { ...reply, done: false }, /пустой или некорректный/],
-  ['truncated answer', 200, { ...reply, done_reason: 'length' }, /лимит длины/],
-  ['tool call', 200, { ...reply, message: { content: 'Invoke', tool_calls: [{}] } }, /пустой или некорректный/],
+  ['empty answer', 200, { ...reply, message: { content: '' } }, /empty or invalid/],
+  ['unfinished answer', 200, { ...reply, done: false }, /empty or invalid/],
+  ['truncated answer', 200, { ...reply, done_reason: 'length' }, /output token limit/],
+  ['thinking budget exhausted without an answer', 200, { ...reply, done_reason: 'length', message: { content: '', thinking: 'private reasoning' } }, /output token limit/],
+  ['tool call', 200, { ...reply, message: { content: 'Invoke', tool_calls: [{}] } }, /empty or invalid/],
 ] as const) {
   test(`Ollama rejects ${name}`, async t => {
     const baseUrl = await endpoint(t, (_req, res) => { res.statusCode = status; res.end(JSON.stringify(body)); });
@@ -55,11 +56,11 @@ for (const [name, status, body, error] of [
 
 test('Ollama timeout and shutdown cancel the request', async t => {
   const baseUrl = await endpoint(t, () => {});
-  await assert.rejects(createOllama({ ...options, baseUrl, timeoutMs: 30 }).generate([]), /не ответила/);
+  await assert.rejects(createOllama({ ...options, baseUrl, timeoutMs: 30 }).generate([]), /did not respond/);
   const shutdown = new AbortController();
   const pending = createOllama({ ...options, baseUrl, signal: shutdown.signal }).generate([]);
   shutdown.abort();
-  await assert.rejects(pending, /остановлена/);
+  await assert.rejects(pending, /server shutdown/);
 });
 
 test('assistant isolates users, keeps recent chronological history across devices, and records failures', async t => {
@@ -94,6 +95,8 @@ test('assistant isolates users, keeps recent chronological history across device
   assert.equal(await assistant(current.id, 'current question'), 'Ответ');
   assert.equal(messages.length, 14);
   assert.match(messages[0].content, new RegExp(userId));
+  assert.match(messages[0].content, /Всегда отвечай на русском/);
+  assert.match(messages[0].content, /Инструменты не предоставлены/);
   assert.equal(messages[1].content, 'question 2');
   assert.equal(messages[11].content, 'question 7');
   assert.equal(messages.at(-1)!.content, 'current question');
@@ -104,7 +107,7 @@ test('assistant isolates users, keeps recent chronological history across device
   const longQuestion = await db.interaction.create({ data: { userId, deviceId, startedAt: now, status: 'processing', inputAudioKey: 'long.wav' } });
   await assistant(longQuestion.id, 'я'.repeat(5999));
   assert.equal(messages.length, 2, 'History must fit the character budget');
-  await assert.rejects(assistant(longQuestion.id, 'я'.repeat(6001)), /слишком длинная/);
+  await assert.rejects(assistant(longQuestion.id, 'я'.repeat(6001)), /conversation length limit/);
   const separate = await db.interaction.create({ data: { userId: otherUser.id, deviceId, startedAt: new Date(+now - 2000), status: 'processing', inputAudioKey: 'separate.wav' } });
   fail = true;
   await assert.rejects(assistant(separate.id, 'Привет'), /offline/);
@@ -132,5 +135,39 @@ test('Ollama transports multiple typed tool calls with empty content and rejects
   assert.equal(received.options.temperature, 0);
   assert.equal(received.think, true);
   assert.equal(received.options.num_predict, 2048);
-  await assert.rejects(llm.generate([]), /не разрешён/);
+  await assert.rejects(llm.generate([]), /not allowed/);
+});
+
+test('foreign replies get one tool-free Russian repair; repeated failure returns Russian fallback', async t => {
+  const database = await createTestDatabase(); t.after(() => database.close());
+  const db = database.db;
+  const { createHomeTools } = await import('../src/services/smartHome/tools.js');
+  let calls = 0;
+  let repairText = 'Привет!';
+  let returnTool = false;
+  const llm = { provider: 'test', model: 'test', generate: async (_messages: ChatMessage[], tools?: unknown) => {
+    calls++;
+    if (calls % 2 === 0) assert.equal(tools, undefined, 'Language repair must not receive device tools');
+    else assert.ok(Array.isArray(tools) && tools.length > 0);
+    return { text: calls % 2 ? 'Hello!' : repairText,
+      ...(returnTool && calls % 2 === 0 ? { toolCalls: [{ function: { name: 'set_device_power', arguments: { device: 'Бризер', power: true } } }] } : {}),
+      model: 'test', durationMs: 1, inputTokens: 2, outputTokens: 3 };
+  } };
+  const assistant = createAssistant(db, llm, createHomeTools(db, async () => {
+    assert.fail('Language repair must not execute device commands');
+  }));
+  for (const scenario of ['translated', 'still_foreign', 'unrequested_tool'] as const) {
+    calls = 0;
+    repairText = scenario === 'still_foreign' ? 'Hello again!' : 'Привет!';
+    returnTool = scenario === 'unrequested_tool';
+    const row = await db.interaction.create({ data: { userId, deviceId, status: 'processing', inputAudioKey: randomUUID() + '.wav' } });
+    const text = await assistant(row.id, 'Please answer in English.');
+    assert.equal(calls, 2, 'Repair is bounded to one call');
+    assert.match(text, /[А-Яа-яЁё]/);
+    if (scenario === 'translated') assert.equal(text, 'Привет!');
+    else assert.match(text, /Не удалось сформулировать ответ на русском/);
+    const actions = await db.interactionAction.findMany({ where: { interactionId: row.id }, orderBy: { sequence: 'asc' } });
+    assert.deepEqual(actions.map(a => a.operation), ['chat', 'translate_reply']);
+    if (scenario !== 'translated') assert.doesNotMatch(actions[1].error!, /[А-Яа-яЁё]/);
+  }
 });

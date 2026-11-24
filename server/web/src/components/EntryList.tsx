@@ -21,7 +21,7 @@ export function EntryList({ query }: { query: string }) {
       <section className="journal-feed" aria-label="Журнал обращений">
         {items.map(entry => <EntryDetail key={entry.id} entry={entry} />)}
       </section>
-      {error && <div className="notice error" role="alert">{error}. <button className="retry" onClick={loadMore}>Повторить загрузку</button></div>}
+        {error && <div className="notice error" role="alert">{error} <button className="retry" onClick={loadMore}>Повторить загрузку</button></div>}
       {!loading && !error && !items.length && <p className="notice" role="status">По выбранным фильтрам обращений пока нет.</p>}
       <div ref={sentinel} className="feed-end">
         {loading && <p role="status">Загрузка обращений…</p>}

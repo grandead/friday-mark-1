@@ -50,6 +50,11 @@ test('smart home API creates a nested tree and never returns connection credenti
   assert.equal(invalid.statusCode, 400);
   assert.equal(invalid.body.includes(miio.token), false);
   assert.match(invalid.json().message, /IPv4/);
+  assert.equal(invalid.json().code, 'invalid_miio_registration');
+  assert.doesNotMatch(invalid.body, /[А-Яа-яЁё]/);
+  const invalidHome = await post('homes', { displayName: '' });
+  assert.equal(invalidHome.json().code, 'invalid_form');
+  assert.doesNotMatch(invalidHome.body, /[А-Яа-яЁё]/);
   assert.equal((await post('devices', { ...input, registrationType: 'hommynShareUrl' })).statusCode, 400);
   assert.equal(await database.db.homeDevice.count(), 2);
 });

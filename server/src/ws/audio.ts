@@ -34,7 +34,7 @@ function handleConnection(socket: WebSocket, { openSession, log }: Options): Pro
 
   async function abort(reason: string) {
     try { await session.abort(reason); }
-    catch (error) { log(`Ошибка сохранения неполной записи: ${error}`); }
+    catch (error) { log(`Failed to save incomplete recording: ${error}`); }
   }
 
   async function fail(reason: string) {
@@ -50,7 +50,7 @@ function handleConnection(socket: WebSocket, { openSession, log }: Options): Pro
   }
 
   const session = openSession(send, queueFailure);
-  log('ESP32 подключён. Жду «Пятница» или касание.');
+  log('ESP32 connected. Waiting for the wake word or touch input.');
   // Install listeners synchronously and preserve frame order across database writes.
   socket.on('message', (raw: RawData, binary: boolean) => {
     pending = pending.then(async () => {
@@ -63,7 +63,7 @@ function handleConnection(socket: WebSocket, { openSession, log }: Options): Pro
     socket.once('close', () => {
       void pending.finally(async () => {
         await abort('Connection closed');
-        log('Соединение ESP32 закрыто.');
+        log('ESP32 connection closed.');
         resolve();
       });
     });

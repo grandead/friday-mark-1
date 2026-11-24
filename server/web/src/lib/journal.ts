@@ -1,3 +1,4 @@
+import { requestError } from './errors';
 import type { listDevices, listInteractions, listUsers } from '../../../src/services/journal/journal';
 
 export type User = Awaited<ReturnType<typeof listUsers>>[number];
@@ -7,7 +8,7 @@ export type Entry = JournalPage['items'][number];
 
 export async function getJson<T>(url: string, signal: AbortSignal): Promise<T> {
   const response = await fetch(url, { signal });
-  if (!response.ok) throw new Error(`Ошибка сервера (${response.status})`);
+  if (!response.ok) throw await requestError(response);
   return response.json();
 }
 

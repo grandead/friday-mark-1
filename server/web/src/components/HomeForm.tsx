@@ -1,3 +1,5 @@
+import { AppError } from '../../../shared/errors';
+import { userError } from '../lib/errors';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Eye, EyeOff, LoaderCircle, X } from 'lucide-react';
 import { homeRequest, type DeviceType, type Home, type Room, type HomeDevice } from '../lib/smartHome';
@@ -34,13 +36,13 @@ export function HomeForm({ target, types, onClose, onSaved }: {
         const value = await homeRequest<Omit<Room, 'devices'>>('/api/smart-home/rooms', { homeId: target.home.id, displayName: name.trim() });
         onSaved({ kind: 'room', value });
       } else {
-        if (!type) throw new Error('Выберите модель устройства.');
+        if (!type) throw new AppError('model_required');
         const registrationData = type.registrationType === 'miioToken' ? { ip: ip.trim(), token: token.trim() } : { shareUrl: shareUrl.trim() };
         const value = await homeRequest<HomeDevice>('/api/smart-home/devices', { roomId: target.room.id, typeId: type.id, displayName: name.trim(), registrationData });
         onSaved({ kind: 'device', value });
       }
       onClose();
-    } catch (error) { setError((error as Error).message); setBusy(false); }
+    } catch (error) { setError(userError(error)); setBusy(false); }
   }
 
   return <dialog ref={dialog} className="home-dialog" aria-labelledby="home-form-title" aria-describedby="home-form-description"

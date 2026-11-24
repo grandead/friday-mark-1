@@ -4,6 +4,8 @@ import type { ToolCall, ToolDefinition } from '../llm/types.js';
 import { deviceState, DeviceCommandError, type DeviceCommand, type DeviceDriver } from './driver.js';
 import { parseDeviceRegistration } from '../validation/homeDevice.js';
 import { balluSettings, isBalluTool, confirmBallu, describeBalluSetting, modeNames, soundNames } from './ballu.js';
+import { diagnosticError } from '../../../shared/errors.js';
+import { userErrors } from '../../../shared/userErrors.ru.js';
 
 const selector = z.strictObject({ device: z.string().trim().min(1).max(120), room: z.string().trim().min(1).max(120).optional(), home: z.string().trim().min(1).max(120).optional() });
 const powerInput = selector.extend({ power: z.boolean() });
@@ -11,8 +13,8 @@ const supported = new Set(['xiaomi-smart-humidifier-2', 'smartmi-fresh-air', 'ba
 const normalize = (value: string) => value.toLocaleLowerCase('ru').replaceAll('ё', 'е').trim().replace(/\s+/gu, ' ');
 const properties = {
   device: { type: 'string', description: 'Точное название устройства из каталога, например Бризер.' },
-  room: { type: 'string', description: 'Точное название комнаты из каталога. Обязательно при нескольких одинаковых устройствах.' },
-  home: { type: 'string', description: 'Точное название дома из каталога, если домов несколько.' },
+  room: { type: 'string', description: 'Точное название комнаты из каталога, если пользователь её указал. Иначе пропусти параметр: сервер уточнит неоднозначный выбор.' },
+  home: { type: 'string', description: 'Точное название дома из каталога, если пользователь его указал. Иначе пропусти параметр.' },
 };
 export const homeToolDefinitions: ToolDefinition[] = [
   { type: 'function', function: { name: 'get_device_state', description: 'Прочитать текущее состояние одного прибора по запросу пользователя о состоянии. Не использовать вместо команды настройки или при недоступной функции. Если устройство не определено однозначно, сервер вернёт уточняющий вопрос.', parameters: { type: 'object', properties, required: ['device'], additionalProperties: false } } },
@@ -95,9 +97,12 @@ export function createHomeTools(db: PrismaClient, driver: DeviceDriver) {
         return reply;
       } catch (cause) {
         // Third-party errors can include credentials; never persist or speak them.
-        const error = cause instanceof DeviceCommandError ? `«${device.displayName}», комната «${device.room.displayName}»: ${cause.message}` : `Не удалось получить подтверждение от устройства «${device.displayName}» в комнате «${device.room.displayName}». Проверьте питание, сеть и данные подключения.`;
-        await db.interactionAction.update({ where: { id: action.id }, data: { error } });
-        return error;
+        const error = cause instanceof DeviceCommandError ? cause : new DeviceCommandError('device_unreachable');
+        const reply = cause instanceof DeviceCommandError ? `«${device.displayName}», комната «${device.room.displayName}»: ${userErrors[error.code]}` : `Не удалось получить подтверждение от устройства «${device.displayName}» в комнате «${device.room.displayName}». Проверьте питание, сеть и данные подключения.`;
+        await db.interactionAction.update({ where: { id: action.id }, data: {
+          error: diagnosticError(error), result: { deviceId: device.id, errorCode: error.code, reply, confirmed: false },
+        } });
+        return reply;
       }
     },
   };

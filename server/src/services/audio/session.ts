@@ -52,7 +52,7 @@ export class RecordingSession {
     await this.options.db.interaction.update({ where: { id: active.id }, data: {
       status: 'incomplete', inputAudioKey: basename(path), error: reason, finishedAt: new Date(),
     } });
-    this.options.log(`Неполная запись: ${path} (${reason})`);
+    this.options.log(`Incomplete recording: ${path} (${reason})`);
   }
 
   private async start({ userId, deviceId, sampleRate }: Extract<AudioMessage, { type: 'start' }>) {
@@ -95,7 +95,7 @@ export class RecordingSession {
     this.takeRecording();
     const path = wav.finish(true);
     await this.options.db.interaction.update({ where: { id }, data: { status: 'processing', inputAudioKey: basename(path) } });
-    this.options.log(`■ WAV сохранён (${(samples / wav.sampleRate).toFixed(2)} с): ${path}`);
+    this.options.log(`WAV saved (${(samples / wav.sampleRate).toFixed(2)} s): ${path}`);
     this.notify({ type: 'saved', samples });
     this.options.processor.enqueue(id, path, this.notify);
   }

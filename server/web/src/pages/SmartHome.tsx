@@ -1,3 +1,4 @@
+import { userError } from '../lib/errors';
 import { useEffect, useState } from 'react';
 import { ChevronRight, DoorOpen, Droplets, House, Plus, Radio, Wind } from 'lucide-react';
 import { HomeForm, type HomeFormTarget, type CreatedHomeEntity } from '../components/HomeForm';
@@ -22,7 +23,7 @@ export function SmartHome() {
     setError('');
     homeRequest<SmartHomeData>('/api/smart-home', undefined, request.signal).then(value => {
       if (!request.signal.aborted) setData(value);
-    }).catch(error => { if (!request.signal.aborted) setError(error.message); });
+    }).catch(error => { if (!request.signal.aborted) setError(userError(error)); });
     return () => request.abort();
   }, [retry]);
   const home = data?.homes.find(item => item.id === selected) ?? data?.homes[0];

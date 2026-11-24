@@ -6,7 +6,7 @@ import sherpa from 'sherpa-onnx-node';
 
 const [output, text] = process.argv.slice(2);
 if (!output || !text?.trim()) {
-  console.error('Использование: npm run voice -- ответ.wav "Текст ответа"');
+  console.error('Usage: npm run voice -- reply.wav "Reply text"');
   process.exit(1);
 }
 
@@ -29,7 +29,7 @@ const generationConfig = new sherpa.GenerationConfig({
 const audio = engine.generate({ text, generationConfig });
 const temp = output + '.' + randomUUID() + '.tmp';
 try {
-  if (!audio.samples.length || !sherpa.writeWave(temp, audio)) throw new Error('Не удалось записать речь в WAV');
+  if (!audio.samples.length || !sherpa.writeWave(temp, audio)) throw new Error('Failed to write synthesized speech to WAV');
   await rename(temp, output);
 } finally {
   await rm(temp, { force: true });

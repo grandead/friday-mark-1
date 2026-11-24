@@ -1,3 +1,4 @@
+import { userError } from '../lib/errors';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getJson, type Entry, type JournalPage } from '../lib/journal';
 
@@ -65,7 +66,7 @@ export function useJournal(query: string) {
         publish();
       } catch (error) {
         retryRefresh = refresh;
-        if (!controller.signal.aborted) setState(s => ({ ...s, error: (error as Error).message }));
+        if (!controller.signal.aborted) setState(s => ({ ...s, error: userError(error) }));
       } finally {
         busy = false;
         if (!controller.signal.aborted) {

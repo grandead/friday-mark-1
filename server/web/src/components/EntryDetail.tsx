@@ -70,10 +70,10 @@ export function EntryDetail({ entry }: { entry: Entry }) {
               <pre>
                 {JSON.stringify(
                   {
-                    инициатор: a.initiator,
-                    аргументы: a.arguments,
-                    результат: a.result,
-                    ошибка: a.error,
+                    initiator: a.initiator,
+                    arguments: a.arguments,
+                    result: a.result,
+                    error: a.error,
                   },
                   null,
                   2,
@@ -83,7 +83,10 @@ export function EntryDetail({ entry }: { entry: Entry }) {
           ))}
         </section>
       )}
-      {entry.error && <p className="error">{entry.error}</p>}
+      {entry.error && <>
+        <p className="error">Не удалось завершить обработку обращения.</p>
+        <details><summary>Технические подробности</summary><pre>{entry.error}</pre></details>
+      </>}
     </article>
   );
 }

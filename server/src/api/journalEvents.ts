@@ -38,7 +38,7 @@ export function createJournalEvents(db: PrismaClient, log: (message: string) => 
         response.write(frame);
       }
     } catch (error) {
-      log(`Ошибка обновления журнала: ${error}`);
+      log(`Failed to update journal: ${error}`);
     }
   }
 
