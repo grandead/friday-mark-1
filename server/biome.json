@@ -11,12 +11,16 @@
     "includes": [
       "**",
       "!!**/node_modules",
-      "!!web/dist",
       "!!models",
       "!!.tools",
       "!!recordings",
       "!!package-lock.json",
-      "!!.husky/_"
+      "!!.agents/skills",
+      "!!.husky/_",
+      "!!.next",
+      "!!src/services/database/generated",
+      "!!src/services/database/migrations",
+      "!!next-env.d.ts"
     ]
   },
   "formatter": {
@@ -32,6 +36,11 @@
       "style": {
         "noDescendingSpecificity": "off"
       }
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   },
   "javascript": {

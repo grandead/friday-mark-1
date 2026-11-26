@@ -1,0 +1,1715 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "createNativeEnumType.DeviceRegistrationType",
+    "label": "Create enum type \"DeviceRegistrationType\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "type",
+        "name": "DeviceRegistrationType"
+      }
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "create enum type \"DeviceRegistrationType\"",
+        "sql": "CREATE TYPE \"public\".\"DeviceRegistrationType\" AS ENUM ('miioToken', 'hommynShareUrl')",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "createNativeEnumType.HomeDeviceKind",
+    "label": "Create enum type \"HomeDeviceKind\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "type",
+        "name": "HomeDeviceKind"
+      }
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "create enum type \"HomeDeviceKind\"",
+        "sql": "CREATE TYPE \"public\".\"HomeDeviceKind\" AS ENUM ('humidifier', 'airMonitor', 'breezer')",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.devices",
+    "label": "Create table \"devices\"",
+    "summary": "Creates table \"devices\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "devices"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"devices\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"devices\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"devices\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"devices\"",
+        "sql": "CREATE TABLE \"public\".\"devices\" (\n  \"createdAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"displayName\" text NOT NULL,\n  \"id\" uuid DEFAULT (uuidv7()) NOT NULL,\n  \"lastSeenAt\" timestamptz(3),\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"devices\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"devices\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"devices\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.homeDeviceTypes",
+    "label": "Create table \"homeDeviceTypes\"",
+    "summary": "Creates table \"homeDeviceTypes\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "homeDeviceTypes"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"homeDeviceTypes\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"homeDeviceTypes\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"homeDeviceTypes\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"homeDeviceTypes\"",
+        "sql": "CREATE TABLE \"public\".\"homeDeviceTypes\" (\n  \"code\" text NOT NULL,\n  \"displayName\" text NOT NULL,\n  \"id\" uuid DEFAULT (uuidv7()) NOT NULL,\n  \"kind\" \"HomeDeviceKind\" NOT NULL,\n  \"model\" text NOT NULL,\n  \"registrationType\" \"DeviceRegistrationType\" NOT NULL,\n  \"vendor\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"homeDeviceTypes\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"homeDeviceTypes\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"homeDeviceTypes\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.homeDevices",
+    "label": "Create table \"homeDevices\"",
+    "summary": "Creates table \"homeDevices\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "homeDevices"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"homeDevices\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"homeDevices\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"homeDevices\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"homeDevices\"",
+        "sql": "CREATE TABLE \"public\".\"homeDevices\" (\n  \"createdAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"displayName\" text NOT NULL,\n  \"id\" uuid DEFAULT (uuidv7()) NOT NULL,\n  \"registrationData\" jsonb NOT NULL,\n  \"roomId\" uuid NOT NULL,\n  \"typeId\" uuid NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"homeDevices\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"homeDevices\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"homeDevices\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.homes",
+    "label": "Create table \"homes\"",
+    "summary": "Creates table \"homes\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "homes"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"homes\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"homes\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"homes\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"homes\"",
+        "sql": "CREATE TABLE \"public\".\"homes\" (\n  \"createdAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"displayName\" text NOT NULL,\n  \"id\" uuid DEFAULT (uuidv7()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"homes\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"homes\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"homes\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.interactionActions",
+    "label": "Create table \"interactionActions\"",
+    "summary": "Creates table \"interactionActions\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "interactionActions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"interactionActions\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"interactionActions\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"interactionActions\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"interactionActions\"",
+        "sql": "CREATE TABLE \"public\".\"interactionActions\" (\n  \"arguments\" jsonb NOT NULL,\n  \"error\" text,\n  \"id\" uuid DEFAULT (uuidv7()) NOT NULL,\n  \"initiator\" text NOT NULL,\n  \"interactionId\" uuid NOT NULL,\n  \"operation\" text NOT NULL,\n  \"result\" jsonb,\n  \"sequence\" int4 NOT NULL,\n  \"service\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"interactionActions\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"interactionActions\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"interactionActions\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.interactions",
+    "label": "Create table \"interactions\"",
+    "summary": "Creates table \"interactions\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "interactions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"interactions\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"interactions\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"interactions\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"interactions\"",
+        "sql": "CREATE TABLE \"public\".\"interactions\" (\n  \"deviceId\" uuid NOT NULL,\n  \"error\" text,\n  \"finishedAt\" timestamptz(3),\n  \"id\" uuid DEFAULT (uuidv7()) NOT NULL,\n  \"inputAudioKey\" text NOT NULL,\n  \"outputAudioKey\" text,\n  \"responseSource\" text,\n  \"responseText\" text,\n  \"startedAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"status\" text NOT NULL,\n  \"transcript\" text,\n  \"userId\" uuid NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"interactions\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"interactions\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"interactions\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.rooms",
+    "label": "Create table \"rooms\"",
+    "summary": "Creates table \"rooms\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "rooms"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"rooms\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"rooms\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"rooms\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"rooms\"",
+        "sql": "CREATE TABLE \"public\".\"rooms\" (\n  \"createdAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"displayName\" text NOT NULL,\n  \"homeId\" uuid NOT NULL,\n  \"id\" uuid DEFAULT (uuidv7()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"rooms\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"rooms\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"rooms\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.users",
+    "label": "Create table \"users\"",
+    "summary": "Creates table \"users\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "users"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"users\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"users\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"users\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"users\"",
+        "sql": "CREATE TABLE \"public\".\"users\" (\n  \"createdAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"displayName\" text NOT NULL,\n  \"id\" uuid DEFAULT (uuidv7()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"users\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"users\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"users\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "index.homeDeviceTypes.homeDeviceTypes_code_key",
+    "label": "Create index \"homeDeviceTypes_code_key\" on \"homeDeviceTypes\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "homeDeviceTypes_code_key",
+        "table": "homeDeviceTypes"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"homeDeviceTypes_code_key\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"homeDeviceTypes_code_key\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"homeDeviceTypes_code_key\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"homeDeviceTypes_code_key\"",
+        "sql": "CREATE UNIQUE INDEX \"homeDeviceTypes_code_key\" ON \"public\".\"homeDeviceTypes\" (\"code\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"homeDeviceTypes_code_key\" exists on \"homeDeviceTypes\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND \"i\".\"indisunique\" AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"homeDeviceTypes_code_key\"",
+          "i",
+          "I",
+          "\"public\".\"homeDeviceTypes\"",
+          "btree",
+          "[\"code\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.homeDevices.homeDevices_roomId_idx",
+    "label": "Create index \"homeDevices_roomId_idx\" on \"homeDevices\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "homeDevices_roomId_idx",
+        "table": "homeDevices"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"homeDevices_roomId_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"homeDevices_roomId_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"homeDevices_roomId_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"homeDevices_roomId_idx\"",
+        "sql": "CREATE INDEX \"homeDevices_roomId_idx\" ON \"public\".\"homeDevices\" (\"roomId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"homeDevices_roomId_idx\" exists on \"homeDevices\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"homeDevices_roomId_idx\"",
+          "i",
+          "I",
+          "\"public\".\"homeDevices\"",
+          "btree",
+          "[\"roomId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.homeDevices.homeDevices_typeId_idx",
+    "label": "Create index \"homeDevices_typeId_idx\" on \"homeDevices\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "homeDevices_typeId_idx",
+        "table": "homeDevices"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"homeDevices_typeId_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"homeDevices_typeId_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"homeDevices_typeId_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"homeDevices_typeId_idx\"",
+        "sql": "CREATE INDEX \"homeDevices_typeId_idx\" ON \"public\".\"homeDevices\" (\"typeId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"homeDevices_typeId_idx\" exists on \"homeDevices\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"homeDevices_typeId_idx\"",
+          "i",
+          "I",
+          "\"public\".\"homeDevices\"",
+          "btree",
+          "[\"typeId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.interactionActions.interactionActions_interactionId_sequence_key",
+    "label": "Create index \"interactionActions_interactionId_sequence_key\" on \"interactionActions\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "interactionActions_interactionId_sequence_key",
+        "table": "interactionActions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"interactionActions_interactionId_sequence_key\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"interactionActions_interactionId_sequence_key\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"interactionActions_interactionId_sequence_key\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"interactionActions_interactionId_sequence_key\"",
+        "sql": "CREATE UNIQUE INDEX \"interactionActions_interactionId_sequence_key\" ON \"public\".\"interactionActions\" (\"interactionId\", \"sequence\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"interactionActions_interactionId_sequence_key\" exists on \"interactionActions\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND \"i\".\"indisunique\" AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"interactionActions_interactionId_sequence_key\"",
+          "i",
+          "I",
+          "\"public\".\"interactionActions\"",
+          "btree",
+          "[\"interactionId\",\"sequence\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.interactions.interactions_deviceId_startedAt_idx",
+    "label": "Create index \"interactions_deviceId_startedAt_idx\" on \"interactions\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "interactions_deviceId_startedAt_idx",
+        "table": "interactions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"interactions_deviceId_startedAt_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"interactions_deviceId_startedAt_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"interactions_deviceId_startedAt_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"interactions_deviceId_startedAt_idx\"",
+        "sql": "CREATE INDEX \"interactions_deviceId_startedAt_idx\" ON \"public\".\"interactions\" (\"deviceId\", \"startedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"interactions_deviceId_startedAt_idx\" exists on \"interactions\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"interactions_deviceId_startedAt_idx\"",
+          "i",
+          "I",
+          "\"public\".\"interactions\"",
+          "btree",
+          "[\"deviceId\",\"startedAt\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.interactions.interactions_inputAudioKey_key",
+    "label": "Create index \"interactions_inputAudioKey_key\" on \"interactions\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "interactions_inputAudioKey_key",
+        "table": "interactions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"interactions_inputAudioKey_key\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"interactions_inputAudioKey_key\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"interactions_inputAudioKey_key\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"interactions_inputAudioKey_key\"",
+        "sql": "CREATE UNIQUE INDEX \"interactions_inputAudioKey_key\" ON \"public\".\"interactions\" (\"inputAudioKey\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"interactions_inputAudioKey_key\" exists on \"interactions\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND \"i\".\"indisunique\" AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"interactions_inputAudioKey_key\"",
+          "i",
+          "I",
+          "\"public\".\"interactions\"",
+          "btree",
+          "[\"inputAudioKey\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.interactions.interactions_userId_startedAt_idx",
+    "label": "Create index \"interactions_userId_startedAt_idx\" on \"interactions\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "interactions_userId_startedAt_idx",
+        "table": "interactions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"interactions_userId_startedAt_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"interactions_userId_startedAt_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"interactions_userId_startedAt_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"interactions_userId_startedAt_idx\"",
+        "sql": "CREATE INDEX \"interactions_userId_startedAt_idx\" ON \"public\".\"interactions\" (\"userId\", \"startedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"interactions_userId_startedAt_idx\" exists on \"interactions\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"interactions_userId_startedAt_idx\"",
+          "i",
+          "I",
+          "\"public\".\"interactions\"",
+          "btree",
+          "[\"userId\",\"startedAt\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.rooms.rooms_homeId_idx",
+    "label": "Create index \"rooms_homeId_idx\" on \"rooms\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "rooms_homeId_idx",
+        "table": "rooms"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"rooms_homeId_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"rooms_homeId_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"rooms_homeId_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"rooms_homeId_idx\"",
+        "sql": "CREATE INDEX \"rooms_homeId_idx\" ON \"public\".\"rooms\" (\"homeId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"rooms_homeId_idx\" exists on \"rooms\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"rooms_homeId_idx\"",
+          "i",
+          "I",
+          "\"public\".\"rooms\"",
+          "btree",
+          "[\"homeId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.homeDevices.homeDevices_roomId_fkey",
+    "label": "Add foreign key \"homeDevices_roomId_fkey\" on \"homeDevices\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "homeDevices_roomId_fkey",
+        "table": "homeDevices"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"homeDevices_roomId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "homeDevices_roomId_fkey",
+          "public",
+          "\"public\".\"homeDevices\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"homeDevices_roomId_fkey\" on \"homeDevices\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"homeDevices_roomId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"homeDevices\"\nADD CONSTRAINT \"homeDevices_roomId_fkey\"\nFOREIGN KEY (\"roomId\")\nREFERENCES \"public\".\"rooms\" (\"id\")\nON DELETE RESTRICT\nON UPDATE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"homeDevices_roomId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "homeDevices_roomId_fkey",
+          "public",
+          "\"public\".\"homeDevices\"",
+          "f",
+          "[\"roomId\"]",
+          "\"public\".\"rooms\"",
+          "[\"id\"]",
+          "r",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.homeDevices.homeDevices_typeId_fkey",
+    "label": "Add foreign key \"homeDevices_typeId_fkey\" on \"homeDevices\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "homeDevices_typeId_fkey",
+        "table": "homeDevices"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"homeDevices_typeId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "homeDevices_typeId_fkey",
+          "public",
+          "\"public\".\"homeDevices\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"homeDevices_typeId_fkey\" on \"homeDevices\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"homeDevices_typeId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"homeDevices\"\nADD CONSTRAINT \"homeDevices_typeId_fkey\"\nFOREIGN KEY (\"typeId\")\nREFERENCES \"public\".\"homeDeviceTypes\" (\"id\")\nON DELETE RESTRICT\nON UPDATE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"homeDevices_typeId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "homeDevices_typeId_fkey",
+          "public",
+          "\"public\".\"homeDevices\"",
+          "f",
+          "[\"typeId\"]",
+          "\"public\".\"homeDeviceTypes\"",
+          "[\"id\"]",
+          "r",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.interactionActions.interactionActions_interactionId_fkey",
+    "label": "Add foreign key \"interactionActions_interactionId_fkey\" on \"interactionActions\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "interactionActions_interactionId_fkey",
+        "table": "interactionActions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"interactionActions_interactionId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "interactionActions_interactionId_fkey",
+          "public",
+          "\"public\".\"interactionActions\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"interactionActions_interactionId_fkey\" on \"interactionActions\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"interactionActions_interactionId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"interactionActions\"\nADD CONSTRAINT \"interactionActions_interactionId_fkey\"\nFOREIGN KEY (\"interactionId\")\nREFERENCES \"public\".\"interactions\" (\"id\")\nON DELETE CASCADE\nON UPDATE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"interactionActions_interactionId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "interactionActions_interactionId_fkey",
+          "public",
+          "\"public\".\"interactionActions\"",
+          "f",
+          "[\"interactionId\"]",
+          "\"public\".\"interactions\"",
+          "[\"id\"]",
+          "c",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.interactions.interactions_deviceId_fkey",
+    "label": "Add foreign key \"interactions_deviceId_fkey\" on \"interactions\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "interactions_deviceId_fkey",
+        "table": "interactions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"interactions_deviceId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "interactions_deviceId_fkey",
+          "public",
+          "\"public\".\"interactions\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"interactions_deviceId_fkey\" on \"interactions\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"interactions_deviceId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"interactions\"\nADD CONSTRAINT \"interactions_deviceId_fkey\"\nFOREIGN KEY (\"deviceId\")\nREFERENCES \"public\".\"devices\" (\"id\")\nON DELETE RESTRICT\nON UPDATE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"interactions_deviceId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "interactions_deviceId_fkey",
+          "public",
+          "\"public\".\"interactions\"",
+          "f",
+          "[\"deviceId\"]",
+          "\"public\".\"devices\"",
+          "[\"id\"]",
+          "r",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.interactions.interactions_userId_fkey",
+    "label": "Add foreign key \"interactions_userId_fkey\" on \"interactions\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "interactions_userId_fkey",
+        "table": "interactions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"interactions_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "interactions_userId_fkey",
+          "public",
+          "\"public\".\"interactions\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"interactions_userId_fkey\" on \"interactions\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"interactions_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"interactions\"\nADD CONSTRAINT \"interactions_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"users\" (\"id\")\nON DELETE RESTRICT\nON UPDATE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"interactions_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "interactions_userId_fkey",
+          "public",
+          "\"public\".\"interactions\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"users\"",
+          "[\"id\"]",
+          "r",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.rooms.rooms_homeId_fkey",
+    "label": "Add foreign key \"rooms_homeId_fkey\" on \"rooms\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "rooms_homeId_fkey",
+        "table": "rooms"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"rooms_homeId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "rooms_homeId_fkey",
+          "public",
+          "\"public\".\"rooms\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"rooms_homeId_fkey\" on \"rooms\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"rooms_homeId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"rooms\"\nADD CONSTRAINT \"rooms_homeId_fkey\"\nFOREIGN KEY (\"homeId\")\nREFERENCES \"public\".\"homes\" (\"id\")\nON DELETE RESTRICT\nON UPDATE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"rooms_homeId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "rooms_homeId_fkey",
+          "public",
+          "\"public\".\"rooms\"",
+          "f",
+          "[\"homeId\"]",
+          "\"public\".\"homes\"",
+          "[\"id\"]",
+          "r",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.devices.devices_id_check",
+    "label": "Add check constraint \"devices_id_check\" on \"devices\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "devices_id_check",
+        "table": "devices"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"devices_id_check\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "devices_id_check",
+          "public",
+          "\"public\".\"devices\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"devices_id_check\" on \"devices\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"devices_id_check\"",
+        "sql": "ALTER TABLE \"public\".\"devices\" ADD CONSTRAINT \"devices_id_check\" CHECK (uuid_extract_version(id) IS NOT DISTINCT FROM 7)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"devices_id_check\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "devices_id_check",
+          "public",
+          "\"public\".\"devices\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.users.users_id_check",
+    "label": "Add check constraint \"users_id_check\" on \"users\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "users_id_check",
+        "table": "users"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"users_id_check\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "users_id_check",
+          "public",
+          "\"public\".\"users\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"users_id_check\" on \"users\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"users_id_check\"",
+        "sql": "ALTER TABLE \"public\".\"users\" ADD CONSTRAINT \"users_id_check\" CHECK (uuid_extract_version(id) IS NOT DISTINCT FROM 7)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"users_id_check\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "users_id_check",
+          "public",
+          "\"public\".\"users\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.interactions.interactions_id_check",
+    "label": "Add check constraint \"interactions_id_check\" on \"interactions\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "interactions_id_check",
+        "table": "interactions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"interactions_id_check\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "interactions_id_check",
+          "public",
+          "\"public\".\"interactions\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"interactions_id_check\" on \"interactions\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"interactions_id_check\"",
+        "sql": "ALTER TABLE \"public\".\"interactions\" ADD CONSTRAINT \"interactions_id_check\" CHECK (uuid_extract_version(id) IS NOT DISTINCT FROM 7)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"interactions_id_check\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "interactions_id_check",
+          "public",
+          "\"public\".\"interactions\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.interactionActions.interactionActions_id_check",
+    "label": "Add check constraint \"interactionActions_id_check\" on \"interactionActions\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "interactionActions_id_check",
+        "table": "interactionActions"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"interactionActions_id_check\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "interactionActions_id_check",
+          "public",
+          "\"public\".\"interactionActions\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"interactionActions_id_check\" on \"interactionActions\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"interactionActions_id_check\"",
+        "sql": "ALTER TABLE \"public\".\"interactionActions\" ADD CONSTRAINT \"interactionActions_id_check\" CHECK (uuid_extract_version(id) IS NOT DISTINCT FROM 7)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"interactionActions_id_check\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "interactionActions_id_check",
+          "public",
+          "\"public\".\"interactionActions\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.homes.homes_uuidv7",
+    "label": "Add check constraint \"homes_uuidv7\" on \"homes\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "homes_uuidv7",
+        "table": "homes"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"homes_uuidv7\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "homes_uuidv7",
+          "public",
+          "\"public\".\"homes\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"homes_uuidv7\" on \"homes\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"homes_uuidv7\"",
+        "sql": "ALTER TABLE \"public\".\"homes\" ADD CONSTRAINT \"homes_uuidv7\" CHECK (uuid_extract_version(id) IS NOT DISTINCT FROM 7)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"homes_uuidv7\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "homes_uuidv7",
+          "public",
+          "\"public\".\"homes\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.rooms.rooms_uuidv7",
+    "label": "Add check constraint \"rooms_uuidv7\" on \"rooms\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "rooms_uuidv7",
+        "table": "rooms"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"rooms_uuidv7\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "rooms_uuidv7",
+          "public",
+          "\"public\".\"rooms\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"rooms_uuidv7\" on \"rooms\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"rooms_uuidv7\"",
+        "sql": "ALTER TABLE \"public\".\"rooms\" ADD CONSTRAINT \"rooms_uuidv7\" CHECK (uuid_extract_version(id) IS NOT DISTINCT FROM 7)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"rooms_uuidv7\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "rooms_uuidv7",
+          "public",
+          "\"public\".\"rooms\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.homeDeviceTypes.homeDeviceTypes_uuidv7",
+    "label": "Add check constraint \"homeDeviceTypes_uuidv7\" on \"homeDeviceTypes\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "homeDeviceTypes_uuidv7",
+        "table": "homeDeviceTypes"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"homeDeviceTypes_uuidv7\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "homeDeviceTypes_uuidv7",
+          "public",
+          "\"public\".\"homeDeviceTypes\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"homeDeviceTypes_uuidv7\" on \"homeDeviceTypes\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"homeDeviceTypes_uuidv7\"",
+        "sql": "ALTER TABLE \"public\".\"homeDeviceTypes\" ADD CONSTRAINT \"homeDeviceTypes_uuidv7\" CHECK (uuid_extract_version(id) IS NOT DISTINCT FROM 7)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"homeDeviceTypes_uuidv7\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "homeDeviceTypes_uuidv7",
+          "public",
+          "\"public\".\"homeDeviceTypes\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.homeDevices.homeDevices_uuidv7",
+    "label": "Add check constraint \"homeDevices_uuidv7\" on \"homeDevices\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "homeDevices_uuidv7",
+        "table": "homeDevices"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"homeDevices_uuidv7\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "homeDevices_uuidv7",
+          "public",
+          "\"public\".\"homeDevices\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"homeDevices_uuidv7\" on \"homeDevices\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"homeDevices_uuidv7\"",
+        "sql": "ALTER TABLE \"public\".\"homeDevices\" ADD CONSTRAINT \"homeDevices_uuidv7\" CHECK (uuid_extract_version(id) IS NOT DISTINCT FROM 7)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"homeDevices_uuidv7\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "homeDevices_uuidv7",
+          "public",
+          "\"public\".\"homeDevices\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.homes.homes_name_nonempty",
+    "label": "Add check constraint \"homes_name_nonempty\" on \"homes\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "homes_name_nonempty",
+        "table": "homes"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"homes_name_nonempty\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "homes_name_nonempty",
+          "public",
+          "\"public\".\"homes\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"homes_name_nonempty\" on \"homes\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"homes_name_nonempty\"",
+        "sql": "ALTER TABLE \"public\".\"homes\" ADD CONSTRAINT \"homes_name_nonempty\" CHECK (length(btrim(\"displayName\")) > 0)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"homes_name_nonempty\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "homes_name_nonempty",
+          "public",
+          "\"public\".\"homes\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.rooms.rooms_name_nonempty",
+    "label": "Add check constraint \"rooms_name_nonempty\" on \"rooms\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "rooms_name_nonempty",
+        "table": "rooms"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"rooms_name_nonempty\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "rooms_name_nonempty",
+          "public",
+          "\"public\".\"rooms\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"rooms_name_nonempty\" on \"rooms\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"rooms_name_nonempty\"",
+        "sql": "ALTER TABLE \"public\".\"rooms\" ADD CONSTRAINT \"rooms_name_nonempty\" CHECK (length(btrim(\"displayName\")) > 0)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"rooms_name_nonempty\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "rooms_name_nonempty",
+          "public",
+          "\"public\".\"rooms\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.homeDevices.homeDevices_name_nonempty",
+    "label": "Add check constraint \"homeDevices_name_nonempty\" on \"homeDevices\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "homeDevices_name_nonempty",
+        "table": "homeDevices"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"homeDevices_name_nonempty\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "homeDevices_name_nonempty",
+          "public",
+          "\"public\".\"homeDevices\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"homeDevices_name_nonempty\" on \"homeDevices\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"homeDevices_name_nonempty\"",
+        "sql": "ALTER TABLE \"public\".\"homeDevices\" ADD CONSTRAINT \"homeDevices_name_nonempty\" CHECK (length(btrim(\"displayName\")) > 0)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"homeDevices_name_nonempty\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "homeDevices_name_nonempty",
+          "public",
+          "\"public\".\"homeDevices\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.homeDevices.homeDevices_registration_object",
+    "label": "Add check constraint \"homeDevices_registration_object\" on \"homeDevices\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "homeDevices_registration_object",
+        "table": "homeDevices"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"homeDevices_registration_object\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "homeDevices_registration_object",
+          "public",
+          "\"public\".\"homeDevices\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"homeDevices_registration_object\" on \"homeDevices\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"homeDevices_registration_object\"",
+        "sql": "ALTER TABLE \"public\".\"homeDevices\" ADD CONSTRAINT \"homeDevices_registration_object\" CHECK (jsonb_typeof(\"registrationData\") = 'object')"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"homeDevices_registration_object\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "homeDevices_registration_object",
+          "public",
+          "\"public\".\"homeDevices\"",
+          "c"
+        ]
+      }
+    ]
+  }
+]

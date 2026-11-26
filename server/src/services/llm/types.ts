@@ -18,8 +18,7 @@ export type ModelReply = {
   inputTokens: number;
   outputTokens: number;
 };
-export type LanguageModel = {
-  provider: string;
-  model: string;
-  generate: (messages: ChatMessage[], tools?: ToolDefinition[]) => Promise<ModelReply>;
-};
+export type GenerateResponse = (
+  messages: ChatMessage[],
+  tools?: ToolDefinition[],
+) => Promise<ModelReply>;

@@ -3,28 +3,28 @@ import test from 'node:test';
 import {
   AppError,
   diagnosticError,
+  ERROR_MESSAGES,
   type ErrorCode,
-  errorMessages,
   errorResponse,
-} from '../shared/errors.js';
-import { userErrors } from '../shared/userErrors.ru.js';
-import { homeToolDefinitions } from '../src/services/smartHome/tools.js';
-import { requestError, userError } from '../web/src/lib/errors.js';
+} from '../shared/errors';
+import { USER_ERRORS } from '../shared/user-errors.ru';
+import { requestError, userError } from '../src/lib/errors';
+import { TOOL_DEFINITIONS } from '../src/services/llm-tools';
 
 const cyrillic = /[А-Яа-яЁё]/;
 test('diagnostics and API identifiers are English; LLM descriptions and user messages are Russian', () => {
-  for (const tool of homeToolDefinitions) {
+  for (const tool of TOOL_DEFINITIONS) {
     assert.doesNotMatch(tool.function.name, cyrillic);
     assert.match(tool.function.description, cyrillic);
     for (const name of Object.keys(tool.function.parameters.properties ?? {}))
       assert.doesNotMatch(name, cyrillic);
   }
-  for (const code of Object.keys(errorMessages) as ErrorCode[]) {
+  for (const code of Object.keys(ERROR_MESSAGES) as ErrorCode[]) {
     const error = new AppError(code);
     assert.doesNotMatch(diagnosticError(error), cyrillic);
     assert.doesNotMatch(JSON.stringify(errorResponse(code)), cyrillic);
     assert.match(userError(error), cyrillic);
-    assert.equal(userError(error), userErrors[code]);
+    assert.equal(userError(error), USER_ERRORS[code]);
   }
 });
 

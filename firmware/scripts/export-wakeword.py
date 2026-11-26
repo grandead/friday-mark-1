@@ -5,9 +5,9 @@ import sys
 
 import numpy as np
 
-root = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(root / 'server/scripts'))
 import wakeword
+
+root = Path(__file__).resolve().parents[2]
 
 parser = argparse.ArgumentParser(description=__doc__, fromfile_prefix_chars='@')
 parser.add_argument('--reference', dest='inputs', action='append',

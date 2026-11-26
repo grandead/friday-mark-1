@@ -3,8 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import { WebSocket } from 'ws';
-import { deviceId, userId } from '../src/config/identity.js';
-import { serverPort } from '../src/config/port.js';
+import { DEVICE_ID as deviceId, USER_ID as userId } from '../src/config/identity';
+import { serverPort } from '../src/config/port';
 
 export async function sendWav(path: string, url: string): Promise<string> {
   const wav = await readFile(path);
@@ -31,38 +31,33 @@ export async function sendWav(path: string, url: string): Promise<string> {
   if (!formatOk || !pcm?.length)
     throw new Error('Expected nonempty PCM16 mono 16000 or 20000 Hz WAV');
   const socket = new WebSocket(url);
-  let completed = false;
-  let timeout: NodeJS.Timeout | undefined;
-  const result = new Promise<string>((resolve, reject) => {
-    timeout = setTimeout(() => reject(new Error('Transcription timed out')), 360_000);
-    socket.on('error', reject);
-    socket.on('close', () => {
-      if (!completed) reject(new Error('Server disconnected'));
-    });
-    socket.on('message', (raw) => {
-      const message = JSON.parse(raw.toString());
-      if (message.type === 'transcript') {
-        completed = true;
-        resolve(message.text);
-      }
-      if (message.type === 'error' || message.type === 'transcription_error')
-        reject(new Error(message.message));
-    });
-  });
+  const reply = Promise.withResolvers<string>();
+  const timeout = setTimeout(() => reply.reject(new Error('Transcription timed out')), 360_000);
+  socket.on('error', reply.reject);
+  socket.on('close', () => reply.reject(new Error('Server disconnected')));
+  socket.on('message', (raw) => receiveReply(raw, reply));
+  const result = reply.promise;
   // Attach rejection handling immediately, including while audio is still sending.
   void result.catch(() => {});
   try {
     await once(socket, 'open');
-    socket.send(
-      JSON.stringify({ type: 'start', deviceId, userId, sampleRate, channels: 1, format: 's16le' }),
-    );
+    const start = JSON.stringify({
+      type: 'start',
+      deviceId,
+      userId,
+      sampleRate,
+      channels: 1,
+      format: 's16le',
+    });
+    socket.send(start);
     for (let at = 0; at < pcm.length; at += 1024) {
       if (socket.readyState !== WebSocket.OPEN) throw new Error('Disconnected during recording');
       const frame = pcm.subarray(at, at + 1024);
       socket.send(frame);
       await delay((frame.length * 1000) / (2 * sampleRate));
     }
-    socket.send(JSON.stringify({ type: 'end', samples: pcm.length / 2 }));
+    const end = JSON.stringify({ type: 'end', samples: pcm.length / 2 });
+    socket.send(end);
     return await result;
   } finally {
     clearTimeout(timeout);
@@ -75,7 +70,17 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     throw new Error(
       `Usage: npm run send:wav -- /absolute/file.wav [ws://localhost:${serverPort}/audio]`,
     );
-  console.log(
-    await sendWav(process.argv[2], process.argv[3] ?? `ws://127.0.0.1:${serverPort}/audio`),
-  );
+  const url = process.argv[3] ?? `ws://127.0.0.1:${serverPort}/audio`;
+  const text = await sendWav(process.argv[2], url);
+  console.log(text);
+}
+
+function receiveReply(raw: import('ws').RawData, reply: PromiseWithResolvers<string>) {
+  const text = raw.toString();
+  const message = JSON.parse(text);
+  if (message.type === 'transcript') reply.resolve(message.text);
+  if (message.type === 'error' || message.type === 'transcription_error') {
+    const error = new Error(message.message);
+    reply.reject(error);
+  }
 }

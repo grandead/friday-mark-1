@@ -1,5 +1,8 @@
 // Stable machine-readable codes and English diagnostics. No user-facing copy here.
-export const errorMessages = {
+export const ERROR_MESSAGES = {
+  recording_interrupted: 'The recording was interrupted.',
+  invalid_audio_message: 'Invalid audio message.',
+  interaction_queue_full: 'Interaction queue full',
   heater_missing: 'The device has no heater installed.',
   hardware_unknown: 'The device did not confirm the required hardware.',
   unsupported: 'The setting is unavailable on this device.',
@@ -7,7 +10,8 @@ export const errorMessages = {
   device_unreachable: 'Failed to obtain a response from the device.',
   invalid_device_state: 'The device returned an invalid state.',
   invalid_miio_registration: 'Expected a valid IPv4 address and a 32-character hexadecimal token.',
-  invalid_hommyn_registration: 'Expected a HOMMYN device share URL containing an access token.',
+  invalid_hommyn_registration:
+    'Expected a HOMMYN ASP-100 share URL with a MAC address and a nonzero 32-character hexadecimal token.',
   invalid_form: 'Invalid form fields. Names must contain 1 to 120 characters.',
   entity_not_found: 'The home, room or device model was not found.',
   model_required: 'A device model must be selected.',
@@ -27,14 +31,14 @@ export const errorMessages = {
   tools_not_configured: 'Home tools are not configured.',
   transcript_too_long: 'The transcript exceeds the conversation length limit.',
 } as const;
-export type ErrorCode = keyof typeof errorMessages;
+export type ErrorCode = keyof typeof ERROR_MESSAGES;
 export function isErrorCode(value: unknown): value is ErrorCode {
-  return typeof value === 'string' && Object.hasOwn(errorMessages, value);
+  return typeof value === 'string' && Object.hasOwn(ERROR_MESSAGES, value);
 }
 export class AppError extends Error {
   constructor(
     readonly code: ErrorCode,
-    message: string = errorMessages[code],
+    message: string = ERROR_MESSAGES[code],
     options?: ErrorOptions,
   ) {
     super(message, options);
@@ -42,8 +46,12 @@ export class AppError extends Error {
   }
 }
 export function errorResponse(code: ErrorCode) {
-  return { code, message: errorMessages[code] };
+  return { code, message: ERROR_MESSAGES[code] };
 }
+export function publicError(error: unknown) {
+  return errorResponse(error instanceof AppError ? error.code : 'internal_error');
+}
+
 export function diagnosticError(error: unknown): string {
   return error instanceof AppError ? `${error.code}: ${error.message}` : String(error);
 }

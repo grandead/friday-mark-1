@@ -6,26 +6,28 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { v7 } from 'uuid';
 import { WebSocket } from 'ws';
-import { buildApp } from '../src/app.js';
-import { deviceId, userId } from '../src/config/identity.js';
-import type { listInteractions } from '../src/services/journal/journal.js';
-import { createTestDatabase } from './database.js';
+import type { serializeInteractionPage } from '../src/app/api/interactions/_lib/serialize-interaction-page';
+import { DEVICE_ID as deviceId, USER_ID as userId } from '../src/config/identity';
+import { buildApp } from './application';
+import { createTestDatabase } from './database';
+
+const { getPendingInteractionCount } = await import('../src/services/interactions');
 
 type AudioReply = { type: string; id?: string; code?: string; message?: string };
-type JournalPage = Awaited<ReturnType<typeof listInteractions>>;
+type InteractionPage = Awaited<ReturnType<typeof serializeInteractionPage>>;
 const start = { type: 'start', deviceId, userId, sampleRate: 20000, channels: 1, format: 's16le' };
 async function fixture(t: test.TestContext, options: Partial<Parameters<typeof buildApp>[0]> = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'friday-server-'));
   const database = await createTestDatabase();
-  const calls: string[] = [];
+  const calls: Buffer[] = [];
   const app = await buildApp({
     db: database.db,
     recordingsDir: dir,
-    transcribe: async (path) => {
-      calls.push(path);
+    transcribe: async (wav) => {
+      const bytes = Buffer.from(wav);
+      calls.push(bytes);
       return 'Привет';
     },
-    log: () => {},
     ...options,
   });
   const address = await app.listen({ host: '127.0.0.1', port: 0 });
@@ -61,21 +63,21 @@ test('ordered PCM frames become a valid WAV and one transcript; next press is in
     await until(() => messages.filter((x) => x.type === 'transcript').length === press + 1);
   }
   assert.equal(calls.length, 2);
-  assert.equal((await readdir(dir)).length, 2);
-  const wav = await readFile(calls[0]);
+  assert.equal((await readdir(dir)).length, 4);
+  const wav = calls[0];
   assert.equal(wav.toString('ascii', 0, 4), 'RIFF');
   assert.equal(wav.readUInt32LE(4), wav.length - 8);
   assert.equal(wav.readUInt32LE(24), 20000);
   assert.equal(wav.readUInt32LE(40), pcm.length);
   assert.deepEqual(wav.subarray(44), pcm);
-  const next = await readFile(calls[1]);
+  const next = calls[1];
   assert.equal(next.readUInt32LE(24), 16000);
   assert.deepEqual(next.subarray(44), pcm);
 });
 
 for (const ending of ['disconnect', 'abort', 'bad-count', 'unaligned'] as const) {
   test(`${ending}: keep incomplete WAV without transcription`, async (t) => {
-    const { dir, calls, ws, messages, until } = await fixture(t);
+    const { app, dir, calls, ws, messages, until } = await fixture(t);
     ws.send(JSON.stringify(start));
     ws.send(Buffer.alloc(1024, 42));
     await until(() => messages.some((x) => x.type === 'started'));
@@ -84,6 +86,10 @@ for (const ending of ['disconnect', 'abort', 'bad-count', 'unaligned'] as const)
     if (ending === 'bad-count') ws.send(JSON.stringify({ type: 'end', samples: 999 }));
     if (ending === 'unaligned') ws.send(Buffer.alloc(3));
     await until(async () => (await readdir(dir)).some((x) => x.endsWith('.incomplete.wav')));
+    await until(async () => {
+      const response = await app.inject('/api/interactions');
+      return response.json().items[0]?.status === 'incomplete';
+    });
     const files = await readdir(dir);
     assert.equal(files.length, 1);
     assert.equal(calls.length, 0);
@@ -91,6 +97,30 @@ for (const ending of ['disconnect', 'abort', 'bad-count', 'unaligned'] as const)
     assert.equal(wav.readUInt32LE(40), 1024);
   });
 }
+
+test('an aborted recording updates the live journal before reconnect', async (t) => {
+  const { ws, messages, until } = await fixture(t);
+  const url = new URL('/api/interactions/live', ws.url.replace('ws:', 'http:'));
+  const signal = AbortSignal.timeout(5000);
+  const response = await fetch(url, { signal });
+  const reader = response.body!.pipeThrough(new TextDecoderStream()).getReader();
+  try {
+    await reader.read();
+    ws.send(JSON.stringify(start));
+    await until(() => messages.some((message) => message.type === 'started'));
+    ws.send(JSON.stringify({ type: 'abort' }));
+    let events = '';
+    while (!events.includes('"status":"incomplete"')) {
+      const chunk = await reader.read();
+      assert.ok(!chunk.done);
+      events += chunk.value;
+    }
+    assert.match(events, /"code":"recording_interrupted"/);
+    assert.doesNotMatch(events, /ESP32 reported lost samples/);
+  } finally {
+    await reader.cancel();
+  }
+});
 
 test('reject unsupported sample rate', async (t) => {
   const { ws, calls, messages, until } = await fixture(t);
@@ -133,28 +163,35 @@ for (const invalid of [
     const { ws, messages, until, db, dir } = await fixture(t);
     ws.send(JSON.stringify({ ...start, ...invalid }));
     await until(() => messages.some((m) => m.type === 'error'));
-    assert.equal(await db.interaction.count(), 0);
+    assert.equal(
+      await db.orm.public.Interaction.aggregate((a) => ({ count: a.count() })).then((r) => r.count),
+      0,
+    );
     assert.deepEqual(await readdir(dir), []);
   });
 }
 
-test('HTTP health tracks the same in-flight transcription as the audio socket', async (t) => {
+test('HTTP health stays a plain 200 response while an interaction is processing', async (t) => {
   let failRecognition!: (reason: Error) => void;
   const { app, ws, messages, until, db } = await fixture(t, {
-    recognizer: 'test-stt',
     transcribe: () =>
       new Promise<string>((_, reject) => {
         failRecognition = reject;
       }),
   });
-  const health = async () => (await app.inject({ url: '/health' })).json();
-  assert.deepEqual(await health(), { ok: true, transcriptionJobs: 0, recognizer: 'test-stt' });
+  const initialHealth = await app.inject('/api/health');
+  assert.equal(initialHealth.statusCode, 200);
+  assert.equal(initialHealth.body, '');
   ws.send(JSON.stringify(start));
   ws.send(Buffer.alloc(1024));
   ws.send(JSON.stringify({ type: 'end', samples: 512 }));
   await until(() => typeof failRecognition === 'function');
   try {
-    assert.equal((await health()).transcriptionJobs, 1);
+    const pendingInteractions = getPendingInteractionCount();
+    assert.equal(pendingInteractions, 1);
+    const busyHealth = await app.inject('/api/health');
+    assert.equal(busyHealth.statusCode, 200);
+    assert.equal(busyHealth.body, '');
   } finally {
     failRecognition(new Error('recognizer unavailable'));
   }
@@ -162,9 +199,9 @@ test('HTTP health tracks the same in-flight transcription as the audio socket', 
   const failure = messages.find((message) => message.type === 'transcription_error');
   assert.ok(failure);
   assert.equal(failure.code, 'internal_error');
-  assert.doesNotMatch(failure.message!, /[А-Яа-яЁё]/);
-  await until(async () => (await health()).transcriptionJobs === 0);
-  const row = await db.interaction.findFirstOrThrow();
+  assert.equal(failure.message, 'An internal error occurred.');
+  await until(() => getPendingInteractionCount() === 0);
+  const row = await db.orm.public.Interaction.firstOrThrow();
   assert.equal(row.status, 'failed');
   assert.match(row.inputAudioKey, /\.wav$/);
 });
@@ -174,63 +211,87 @@ test('journal lists a device recording and serves its WAV by id with byte ranges
   ws.send(JSON.stringify(start));
   ws.send(Buffer.alloc(1024));
   ws.send(JSON.stringify({ type: 'end', samples: 512 }));
-  await until(async () => (await db.interaction.count({ where: { status: 'complete' } })) === 1);
+  await until(
+    async () =>
+      (await db.orm.public.Interaction.where({ status: 'complete' })
+        .aggregate((a) => ({ count: a.count() }))
+        .then((r) => r.count)) === 1,
+  );
 
   const devices = (await app.inject('/api/devices')).json();
   assert.equal(devices[0].id, deviceId);
   const journal = await app.inject(`/api/interactions?deviceId=${deviceId}`);
   assert.equal(journal.statusCode, 200);
-  const {
-    items: [item],
-    total,
-  } = journal.json();
-  assert.equal(total, 1);
-  const otherUser = await db.user.create({ data: { displayName: 'Test listener' } });
+  const result = journal.json<InteractionPage>();
+  assert.equal(result.items.length, 1);
+  assert.equal(result.nextCursor, null);
+  const [item] = result.items;
+  const otherUser = await db.orm.public.User.create({ displayName: 'Test listener' });
   const users = (await app.inject('/api/users')).json();
   assert.ok(users.some((user: { id: string }) => user.id === otherUser.id));
   const filtered = (
     await app.inject(`/api/interactions?deviceId=${deviceId}&userId=${otherUser.id}`)
   ).json();
-  assert.equal(filtered.total, 0);
   assert.deepEqual(filtered.items, []);
+  assert.equal(filtered.nextCursor, null);
   assert.equal(item.id, messages.find((m) => m.type === 'started')!.id);
   assert.equal(item.transcript, 'Привет');
-  assert.equal(item.outputAudio, null);
-  assert.equal(item.inputAudioKey, undefined);
-  const audio = await app.inject({ url: item.inputAudio, headers: { range: 'bytes=0-43' } });
+  assert.equal(item.hasOutputAudio, false);
+  assert.equal('inputAudioKey' in item, false);
+  assert.equal('outputAudioKey' in item, false);
+  assert.equal('inputAudio' in item, false);
+  assert.equal('outputAudio' in item, false);
+  assert.equal(item.hasInputAudio, true);
+  const inputAudioUrl = `/api/audio/${item.id}/input`;
+  const completeAudio = await app.inject(inputAudioUrl);
+  assert.equal(completeAudio.statusCode, 200);
+  assert.equal(completeAudio.headers['content-type'], 'audio/wav');
+  const audio = await app.inject({ url: inputAudioUrl, headers: { range: 'bytes=0-43' } });
   assert.equal(audio.statusCode, 206);
   assert.equal(audio.rawPayload.length, 44);
   assert.equal(audio.rawPayload.toString('ascii', 0, 4), 'RIFF');
-  assert.equal((await app.inject(`/api/interactions/${item.id}/audio/output`)).statusCode, 404);
+  const suffix = await app.inject({ url: inputAudioUrl, headers: { range: 'bytes=-4' } });
+  const expectedSuffix = completeAudio.rawPayload.subarray(-4);
+  assert.equal(suffix.statusCode, 206);
+  assert.deepEqual(suffix.rawPayload, expectedSuffix);
+  const invalidRange = await app.inject({
+    url: inputAudioUrl,
+    headers: { range: `bytes=${completeAudio.rawPayload.length}-` },
+  });
+  assert.equal(invalidRange.statusCode, 416);
+  const missingOutput = await app.inject(`/api/audio/${item.id}/output`);
+  assert.equal(missingOutput.statusCode, 404);
+  const invalidId = await app.inject('/api/audio/invalid/input');
+  assert.equal(invalidId.statusCode, 400);
+  const invalidKind = await app.inject(`/api/audio/${item.id}/unknown`);
+  assert.equal(invalidKind.statusCode, 400);
   assert.equal((await app.inject('/api/interactions?deviceId=invalid')).statusCode, 400);
 });
 
 test('journal publishes completed and failed interactions, including replies without audio', async (t) => {
   const phrases = ['Привет', 'Включи увлажнитель', 'Выключи увлажнитель'];
-  const { db, ws, until, messages, dir } = await fixture(t, {
+  const { app, db, ws, until, messages, dir } = await fixture(t, {
     transcribe: async () => phrases.shift()!,
     generateReply: async (id, transcript) => {
       if (transcript === 'Привет') return '';
       const reply = transcript.startsWith('Включи') ? 'on' : 'off';
-      await db.interactionAction.create({
-        data: {
-          interactionId: id,
-          sequence: 1,
-          initiator: 'llm',
-          service: 'smartHome',
-          operation: 'set_device_power',
-          arguments: { power: reply === 'on' },
-          result: { reply },
-        },
+      await db.orm.public.InteractionAction.create({
+        interactionId: id,
+        sequence: 1,
+        initiator: 'llm',
+        service: 'smartHome',
+        operation: 'set_device_power',
+        arguments: { power: reply === 'on' },
+        result: { reply },
       });
       return reply;
     },
-    synthesizeReply: async (reply, output) => {
+    synthesizeSpeech: async (reply, output) => {
       if (reply === 'on') throw new Error('Synthesis failed');
       await copyFile(output.replace(/\.reply\.wav$/, '.wav'), output);
     },
   });
-  const url = new URL('/api/journal/events', ws.url.replace('ws:', 'http:'));
+  const url = new URL('/api/interactions/live', ws.url.replace('ws:', 'http:'));
   const response = await fetch(url, { signal: AbortSignal.timeout(10_000) });
   assert.match(response.headers.get('content-type')!, /text\/event-stream/);
   const reader = response.body!.pipeThrough(new TextDecoderStream()).getReader();
@@ -241,36 +302,38 @@ test('journal publishes completed and failed interactions, including replies wit
       ws.send(Buffer.alloc(1024));
       ws.send(JSON.stringify({ type: 'end', samples: 512 }));
       await until(
-        async () => (await db.interaction.count({ where: { finishedAt: { not: null } } })) === i,
+        async () =>
+          (await db.orm.public.Interaction.where((r) => r.finishedAt.isNotNull())
+            .aggregate((a) => ({ count: a.count() }))
+            .then((r) => r.count)) === i,
       );
     }
     const id = messages.filter((m) => m.type === 'started').at(-1)!.id;
-    let event = '';
-    while (!event.includes('\n\n')) {
+    const terminalEntries = new Map<string, InteractionPage['items'][number]>();
+    let buffered = '';
+    while (terminalEntries.size < 3) {
       const chunk = await reader.read();
       assert.ok(!chunk.done);
-      event += chunk.value;
-    }
-    while (event.split('\n\n').filter(Boolean).length < 3) {
-      const chunk = await reader.read();
-      assert.ok(!chunk.done);
-      event += chunk.value;
-    }
-    const publishedEntries = event
-      .trim()
-      .split('\n\n')
-      .map((frame) => {
+      buffered += chunk.value;
+      const frames = buffered.split('\n\n');
+      buffered = frames.pop() ?? '';
+      for (const frame of frames) {
         const [name, payload] = frame.split('\n');
-        assert.equal(name, 'event: interactionUpdated');
-        return JSON.parse(payload.slice('data: '.length));
-      });
+        assert.equal(name, 'event: interaction.updated');
+        const entry = JSON.parse(payload.slice('data: '.length));
+        if (entry.status === 'complete' || entry.status === 'failed')
+          terminalEntries.set(entry.id, entry);
+      }
+    }
+    const publishedEntries = [...terminalEntries.values()];
     assert.deepEqual(
       publishedEntries.map((entry) => entry.status),
       ['complete', 'failed', 'complete'],
     );
-    assert.equal(publishedEntries[0].outputAudio, null);
+    assert.equal(publishedEntries[0].hasOutputAudio, false);
     assert.equal(publishedEntries[1].responseText, 'on');
-    assert.match(publishedEntries[1].error, /Synthesis failed/);
+    assert.equal(publishedEntries[1].error?.code, 'internal_error');
+    assert.doesNotMatch(JSON.stringify(publishedEntries), /Synthesis failed/);
     const published = publishedEntries[2];
     assert.equal(published.id, id);
     assert.equal(published.device.id, deviceId);
@@ -279,9 +342,16 @@ test('journal publishes completed and failed interactions, including replies wit
     assert.equal(published.responseText, 'off');
     assert.equal(published.actions[0].operation, 'set_device_power');
     assert.deepEqual(published.actions[0].result, { reply: 'off' });
-    assert.equal(published.outputAudio, `/api/interactions/${id}/audio/output`);
-    assert.equal(published.inputAudioKey, undefined);
-    const entry = await db.interaction.findUniqueOrThrow({ where: { id } });
+    assert.equal(published.hasOutputAudio, true);
+    assert.equal('inputAudio' in published, false);
+    assert.equal('outputAudio' in published, false);
+    assert.equal('inputAudioKey' in published, false);
+    assert.equal('outputAudioKey' in published, false);
+    const pageResponse = await app.inject('/api/interactions');
+    const page = pageResponse.json<InteractionPage>();
+    const pageEntry = page.items.find((item) => item.id === id);
+    assert.deepEqual(published, pageEntry);
+    const entry = await db.orm.public.Interaction.firstOrThrow({ id });
     assert.equal(entry.status, 'complete');
     assert.equal(
       (await readFile(join(dir, entry.outputAudioKey!))).toString('ascii', 0, 4),
@@ -294,8 +364,8 @@ test('journal publishes completed and failed interactions, including replies wit
 
 test('journal cursors keep a stable history across inserts and combine device, user and time filters', async (t) => {
   const { app, db } = await fixture(t);
-  const otherDevice = await db.device.create({ data: { displayName: 'Second device' } });
-  const otherUser = await db.user.create({ data: { displayName: 'Second user' } });
+  const otherDevice = await db.orm.public.Device.create({ displayName: 'Second device' });
+  const otherUser = await db.orm.public.User.create({ displayName: 'Second user' });
   const startedAt = new Date('2026-11-23T10:00:00.000Z');
   const rows = Array.from({ length: 32 }, (_, index) => ({
     id: v7(),
@@ -305,15 +375,13 @@ test('journal cursors keep a stable history across inserts and combine device, u
     status: 'complete',
     inputAudioKey: `history-${index}.wav`,
   }));
-  await db.interaction.createMany({ data: rows });
-  await db.interaction.create({
-    data: {
-      deviceId: otherDevice.id,
-      userId: otherUser.id,
-      startedAt,
-      status: 'complete',
-      inputAudioKey: 'second-device.wav',
-    },
+  for (const row of rows) await db.orm.public.Interaction.create(row);
+  await db.orm.public.Interaction.create({
+    deviceId: otherDevice.id,
+    userId: otherUser.id,
+    startedAt,
+    status: 'complete',
+    inputAudioKey: 'second-device.wav',
   });
   const query = new URLSearchParams({
     deviceId,
@@ -321,25 +389,26 @@ test('journal cursors keep a stable history across inserts and combine device, u
     from: startedAt.toISOString(),
     to: startedAt.toISOString(),
   });
-  const first = (await app.inject(`/api/interactions?${query}`)).json<JournalPage>();
+  const first = (await app.inject(`/api/interactions?${query}`)).json<InteractionPage>();
   assert.equal(first.items.length, 15);
-  assert.equal(first.total, 32);
+  const responseKeys = Object.keys(first);
+  responseKeys.sort();
+  assert.deepEqual(responseKeys, ['items', 'nextCursor']);
+  assert.ok(first.nextCursor);
   assert.ok(first.items.every((entry) => entry.device.id === deviceId && entry.user.id === userId));
-  await db.interaction.create({
-    data: {
-      deviceId,
-      userId,
-      status: 'complete',
-      inputAudioKey: 'new.wav',
-      startedAt,
-    },
+  await db.orm.public.Interaction.create({
+    deviceId,
+    userId,
+    status: 'complete',
+    inputAudioKey: 'new.wav',
+    startedAt,
   });
   const ids = first.items.map((entry) => entry.id);
-  let cursor = first.nextCursor;
+  let cursor: InteractionPage['nextCursor'] = first.nextCursor;
   while (cursor) {
     query.set('before', cursor.startedAt);
     query.set('beforeId', cursor.id);
-    const page = (await app.inject(`/api/interactions?${query}`)).json<JournalPage>();
+    const page = (await app.inject(`/api/interactions?${query}`)).json<InteractionPage>();
     ids.push(...page.items.map((entry) => entry.id));
     cursor = page.nextCursor;
   }
@@ -351,11 +420,13 @@ test('journal cursors keep a stable history across inserts and combine device, u
       .reverse(),
   );
   const all = (await app.inject('/api/interactions')).json();
-  assert.equal(all.total, 34);
+  assert.equal(all.items.length, 15);
+  assert.ok(all.nextCursor);
   const acrossDevices = (await app.inject(`/api/interactions?userId=${otherUser.id}`)).json();
   assert.equal(acrossDevices.items[0].device.displayName, 'Second device');
   const empty = (await app.inject('/api/interactions?from=2027-01-01T00:00:00Z')).json();
   assert.deepEqual(empty.items, []);
+  assert.equal(empty.nextCursor, null);
   for (const invalid of [
     'from=invalid',
     'from=2026-11-24T00:00:00Z&to=2026-11-23T00:00:00Z',
@@ -372,12 +443,12 @@ test('LLM replies survive TTS failure, model failures do not block the queue, an
   const { ws, messages, until, db } = await fixture(t, {
     transcribe: async () => phrases.shift()!,
     generateReply: async (id, text) => {
-      assert.equal((await db.interaction.findUniqueOrThrow({ where: { id } })).transcript, text);
+      assert.equal((await db.orm.public.Interaction.firstOrThrow({ id })).transcript, text);
       generated.push(text);
       if (text === 'Второй вопрос') throw new Error('Model unavailable');
       return `Ответ на ${text}`;
     },
-    synthesizeReply: async (text, output) => {
+    synthesizeSpeech: async (text, output) => {
       spoken.push(text);
       if (text.endsWith('Первый вопрос')) throw new Error('TTS unavailable');
       await copyFile(output.replace(/\.reply\.wav$/, '.wav'), output);
@@ -388,10 +459,16 @@ test('LLM replies survive TTS failure, model failures do not block the queue, an
     ws.send(Buffer.alloc(1024));
     ws.send(JSON.stringify({ type: 'end', samples: 512 }));
     await until(
-      async () => (await db.interaction.count({ where: { finishedAt: { not: null } } })) === count,
+      async () =>
+        (await db.orm.public.Interaction.where((r) => r.finishedAt.isNotNull())
+          .aggregate((a) => ({ count: a.count() }))
+          .then((r) => r.count)) === count,
     );
   }
-  const rows = await db.interaction.findMany({ orderBy: [{ startedAt: 'asc' }, { id: 'asc' }] });
+  const rows = await db.orm.public.Interaction.orderBy([
+    (r) => r.startedAt.asc(),
+    (r) => r.id.asc(),
+  ]).all();
   assert.deepEqual(
     rows.map((row) => row.status),
     ['failed', 'failed', 'complete', 'complete'],

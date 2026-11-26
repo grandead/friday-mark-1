@@ -1,0 +1,1 @@
+export { createLiveStream } from './service';
