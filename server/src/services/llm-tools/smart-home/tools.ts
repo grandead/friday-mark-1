@@ -1,92 +1,60 @@
-import { diagnosticError } from '../../../../shared/errors';
+import { AppError, diagnosticError } from '../../../../shared/errors';
 import { USER_ERRORS } from '../../../../shared/user-errors.ru';
-import { type Models, orm } from '../../database';
+import { DeviceCommandError, getDeviceOperation } from '../../smart-home';
 import type { ToolOutcome } from '../registry';
-import type { DeviceModel, DeviceTool, ToolResult } from './common';
 import { BALLU_ASP100 } from './devices/ballu-asp100';
 import { QINGPING_AIR_MONITOR_LITE } from './devices/qingping-air-monitor-lite';
 import { SMART_HUMIDIFIER_2 } from './devices/smart-humidifier2';
 import { SMARTMI_FRESH_AIR } from './devices/smartmi-fresh-air';
-import { DeviceCommandError } from './driver';
 
-export const DEVICE_MODELS: readonly DeviceModel[] = [
+export const VOICE_MODELS = [
   SMART_HUMIDIFIER_2,
   SMARTMI_FRESH_AIR,
   BALLU_ASP100,
   QINGPING_AIR_MONITOR_LITE,
 ];
-export const HOME_TOOLS = DEVICE_MODELS.flatMap((model) => model.tools);
-const DEVICE_TOOLS = new Map<string, { model: DeviceModel; tool: DeviceTool }>();
+type Tool = (typeof VOICE_MODELS)[number]['tools'][number];
+type BoundTool = Tool & ReturnType<typeof getDeviceOperation>;
+export const HOME_TOOLS: BoundTool[] = [];
 
-for (const model of DEVICE_MODELS) {
+for (const model of VOICE_MODELS) {
   for (const tool of model.tools) {
-    DEVICE_TOOLS.set(tool.name, { model, tool });
+    const operation = getDeviceOperation(model.code, tool.operation);
+    HOME_TOOLS.push({ ...tool, ...operation });
   }
 }
-
-type Device = Pick<Models.public_HomeDevice, 'id' | 'displayName' | 'registrationData'> & {
-  type: Pick<Models.public_HomeDeviceType, 'code'>;
-  room: Pick<Models.public_Room, 'displayName'>;
-};
 
 export async function executeHomeTool(
   name: string,
   parameters: Record<string, unknown>,
 ): Promise<ToolOutcome> {
-  // The shared executor has already validated these arguments with this tool's schema.
-  const entry = DEVICE_TOOLS.get(name);
-  if (!entry) throw new Error(`Unknown home tool: ${name}`);
-  const { model, tool } = entry;
+  const tool = HOME_TOOLS.find((entry) => entry.name === name);
+  if (!tool) throw new Error(`Unknown home tool: ${name}`);
   const args = parameters as { deviceId: string };
-  const device = (await orm.HomeDevice.select('id', 'displayName', 'registrationData')
-    .include('type', (type) => type.select('code'))
-    .include('room', (room) => room.select('displayName'))
-    .first({ id: args.deviceId })) as Device | null;
-  if (!device)
-    return {
-      reply: 'Не нашла устройство с таким id. Уточните выбор по каталогу.',
-      status: 'rejected',
-    };
-  if (device.type.code !== model.code) {
-    return {
-      reply: 'Эта команда недоступна для выбранной модели устройства.',
-      data: { deviceId: device.id },
-      status: 'rejected',
-    };
-  }
-  const location = `«${device.displayName}», комната «${device.room.displayName}»`;
-  const connection = {
-    model: model.code,
-    transport: model.transport,
-    registrationData: device.registrationData,
-  };
-  let result: ToolResult;
+  const data = { deviceId: args.deviceId };
   try {
-    result = await tool.execute(args, connection);
-  } catch (cause) {
-    if (!(cause instanceof DeviceCommandError)) throw cause;
-    const error = diagnosticError(cause);
-    const message = USER_ERRORS[cause.code];
+    const result = await tool.execute(args);
     return {
-      reply: `${location}: ${message}`,
-      data: { deviceId: device.id },
-      error,
-      errorCode: cause.code,
-      status: 'failed',
+      reply: `«${result.name}», комната «${result.room}»: ${result.description}`,
+      data: { ...data, state: result.state },
+      status: 'confirmed',
     };
+  } catch (cause) {
+    if (cause instanceof AppError && cause.code === 'entity_not_found') {
+      return {
+        reply: 'Не нашла устройство с таким id. Уточните выбор по каталогу.',
+        status: 'rejected',
+      };
+    }
+    if (cause instanceof AppError && cause.code === 'device_model_mismatch') {
+      return { reply: USER_ERRORS[cause.code], data, status: 'rejected' };
+    }
+    if (!(cause instanceof DeviceCommandError)) throw cause;
+    const message = USER_ERRORS[cause.code];
+    const reply = cause.location
+      ? `«${cause.location.name}», комната «${cause.location.room}»: ${message}`
+      : message;
+    const error = diagnosticError(cause);
+    return { reply, data, error, errorCode: cause.code, status: 'failed' };
   }
-  const entries = Object.entries(result.state);
-  const defined = entries.filter(isDefinedState);
-  const state = Object.fromEntries(defined);
-  return {
-    reply: `${location}: ${result.description}`,
-    data: { deviceId: device.id, state },
-    status: 'confirmed',
-  };
-}
-
-function isDefinedState(
-  entry: [string, string | number | boolean | undefined],
-): entry is [string, string | number | boolean] {
-  return entry[1] !== undefined;
 }

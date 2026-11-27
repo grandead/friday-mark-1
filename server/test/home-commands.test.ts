@@ -3,10 +3,7 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { DEVICE_ID as deviceId, USER_ID as userId } from '../src/config/identity';
 import type { ChatMessage, ToolCall, ToolDefinition } from '../src/services/llm';
-import {
-  type DeviceCommand,
-  DeviceCommandError,
-} from '../src/services/llm-tools/smart-home/driver';
+import { type DeviceCommand, DeviceCommandError } from '../src/services/smart-home/driver';
 import { createAssistant } from './assistant';
 import { createTestDatabase } from './database';
 import { createHomeTools } from './home-tools';

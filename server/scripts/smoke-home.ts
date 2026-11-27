@@ -4,10 +4,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { DEVICE_ID as deviceId, USER_ID as userId } from '../src/config/identity';
 import { generateResponse } from '../src/services/llm/generate-response';
-import {
-  type DeviceCommand,
-  DeviceCommandError,
-} from '../src/services/llm-tools/smart-home/driver';
+import { type DeviceCommand, DeviceCommandError } from '../src/services/smart-home/driver';
 import { createAssistant } from '../test/assistant';
 import { createTestDatabase } from '../test/database';
 import { createHomeTools } from '../test/home-tools';

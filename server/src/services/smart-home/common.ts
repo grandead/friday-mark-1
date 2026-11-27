@@ -4,18 +4,15 @@ import { DeviceCommandError, runDeviceCommand } from './driver';
 
 export type DeviceConnection = Pick<DeviceCommand, 'model' | 'transport' | 'registrationData'>;
 type DeviceState = Record<string, string | number | boolean | undefined>;
-export type ToolResult = { state: DeviceState; description: string };
-export type DeviceTool<Args extends { deviceId: string } = { deviceId: string }> = {
-  name: string;
-  description: string;
-  schema: z.ZodType<Args>;
-  invalidReply?: string;
-  execute(args: Args, connection: DeviceConnection): Promise<ToolResult>;
+type CommandResult = { state: DeviceState; description: string };
+export type DeviceOperation = {
+  schema: z.ZodType<{ deviceId: string }>;
+  execute(args: { deviceId: string }, connection: DeviceConnection): Promise<CommandResult>;
 };
 export type DeviceModel = {
   code: string;
   transport: DeviceCommand['transport'];
-  tools: readonly DeviceTool[];
+  operations: Record<string, DeviceOperation>;
 };
 
 export const DEVICE_ID_SCHEMA = z

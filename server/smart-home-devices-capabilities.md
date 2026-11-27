@@ -1,6 +1,6 @@
 # Smart home devices capabilities
 
-Checked on 2026-11-27. Each model declares its own tools in [`src/services/llm-tools/smart-home/devices/`](src/services/llm-tools/smart-home/devices/). The catalogue lists them for each stored device. All tools require `deviceId`; settings use named, validated arguments. Settings succeed only after readback matches the request. Unsupported optional properties are omitted, never reported as zero or false.
+Checked on 2026-11-27. Device operations and schemas live in [`src/services/smart-home/devices/`](src/services/smart-home/devices/). Each model declares its voice tools in [`src/services/llm-tools/smart-home/devices/`](src/services/llm-tools/smart-home/devices/). The catalogue lists them for each stored device. All tools require `deviceId`; settings use named, validated arguments. Settings succeed only after readback matches the request. Unsupported optional properties are omitted, never reported as zero or false.
 
 ## Smartmi Fresh Air — 9 tools
 
@@ -115,11 +115,12 @@ Only `power` is required in the parsed state. Other fields are included when rep
 - A missing required setting produces `unsupported`. A missing heater produces `heater_missing`; an unknown heater flag produces `hardware_unknown`. A write without matching confirmation produces `not_confirmed`; it may still have affected the physical device. Connection failures produce `device_unreachable`.
 - There is no tool for automatic CO₂ control or a CO₂ target. There is no separate heater on/off switch, room-temperature target, night-mode speed, ambient-sound volume, direct backlight switch, custom turbo duration, schedule or prefilter reset in this integration. Do not substitute eco mode or whole-device power for heater control.
 
-Implementation sources: [tool schemas and handlers](src/services/llm-tools/smart-home/devices/ballu-asp100.ts), [wire mappings and acknowledgements](scripts/ballu_protocol.py), [discovery and connection](scripts/home_syncleo.py). The adapter pins `pysyncleo==0.4.1` and `zeroconf==0.154.0`.
+Implementation sources: [command schemas and handlers](src/services/smart-home/devices/ballu-asp100.ts), [wire mappings and acknowledgements](scripts/ballu_protocol.py), [discovery and connection](scripts/home_syncleo.py). The adapter pins `pysyncleo==0.4.1` and `zeroconf==0.154.0`.
 
 ## Verification
 
 - Read-only checks passed on the registered Smartmi VA4 (`1.4.6_1014`) and Deerma JSQ2G (`2.2.2`). All 18 humidifier properties answered successfully.
 - Read-only checks passed on Qingping CGD1ST (`2.1.7_0481`) after correcting its stored IP. All 27 measurement, battery and setting properties answered successfully. The separate MAC property was not requested.
-- No physical setting was changed or filter counter reset. Protocol writes and readback failures are tested with simulated devices in `test/test_miio.py`; tool schemas and handlers are tested in `test/xiaomi-commands.test.ts`.
+- The Node.js miIO driver and previous Python adapter returned matching property names and types on the registered Smartmi VA4 (15 fields), Deerma JSQ2G (18) and Qingping CGD1ST (17).
+- No physical setting was changed or filter counter reset. Protocol writes and readback failures are tested with simulated devices in `test/miio.test.ts`; tool schemas and handlers are tested in `test/xiaomi-commands.test.ts`.
 - Ballu wire encoding, unsupported inputs, hardware checks and fresh acknowledgements are covered by [`test/test_ballu.py`](test/test_ballu.py). Tool validation, model matching, returned-state checks, error reporting and CO₂ omission are covered by [`test/ballu-commands.test.ts`](test/ballu-commands.test.ts). This documentation update used the implementation and these test cases; it did not run new commands on physical Ballu devices.

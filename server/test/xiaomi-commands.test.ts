@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { DeviceCommand } from '../src/services/llm-tools/smart-home/driver';
+import type { DeviceCommand } from '../src/services/smart-home/driver';
 import { withServiceResources } from './service-resources';
 
 const { DEVICE_TOOLS: TOOLS } = await import('./home-tools');

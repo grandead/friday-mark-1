@@ -3,14 +3,14 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test, { mock } from 'node:test';
-import type { DeviceCommand } from '../src/services/llm-tools/smart-home/driver';
+import type { DeviceCommand } from '../src/services/smart-home/driver';
 
 const RUNTIME_MODULE = new URL('../src/services/runtime/index.ts', import.meta.url);
 let shutdown = new AbortController();
 mock.module(RUNTIME_MODULE, { namedExports: { getShutdownSignal: () => shutdown.signal } });
-const { runDeviceCommand } = await import('../src/services/llm-tools/smart-home/driver');
+const { runDeviceCommand } = await import('../src/services/smart-home/driver');
 
-test('transport selects the adapter, preserves Python stdin format and redacts process failures', async (t) => {
+test('Syncleo uses its adapter, preserves Python stdin format and redacts process failures', async (t) => {
   const dir = await mkdtemp(join(tmpdir(), 'friday-driver-'));
   const originalPath = process.env.PATH;
   t.after(async () => {
@@ -38,30 +38,25 @@ process.stdin.on('end', () => {
   );
   process.env.PATH = dir;
   const request: DeviceCommand = {
-    transport: 'miio',
+    transport: 'syncleo',
     model: 'test-model',
     registrationData: { token: 'private token' },
     operation: 'power',
     parameters: { power: false },
   };
-  for (const [transport, filename] of [
-    ['miio', 'home_miio.py'],
-    ['syncleo', 'home_syncleo.py'],
-  ] as const) {
-    const result = (await runDeviceCommand({ ...request, transport })) as {
-      args: string[];
-      body: unknown;
-    };
-    assert.deepEqual(result.args.slice(0, 2), ['run', '--offline']);
-    assert.ok(result.args[2].endsWith(`/scripts/${filename}`));
-    assert.ok(!JSON.stringify(result.args).includes('private token'));
-    assert.deepEqual(result.body, {
-      model: request.model,
-      registrationData: request.registrationData,
-      operation: 'power',
-      power: false,
-    });
-  }
+  const result = (await runDeviceCommand(request)) as {
+    args: string[];
+    body: unknown;
+  };
+  assert.deepEqual(result.args.slice(0, 2), ['run', '--offline']);
+  assert.ok(result.args[2].endsWith('/scripts/home_syncleo.py'));
+  assert.ok(!JSON.stringify(result.args).includes('private token'));
+  assert.deepEqual(result.body, {
+    model: request.model,
+    registrationData: request.registrationData,
+    operation: 'power',
+    power: false,
+  });
   shutdown = new AbortController();
   const hanging = { ...request, operation: 'hang' };
   const pending = runDeviceCommand(hanging);

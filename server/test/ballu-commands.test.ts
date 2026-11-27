@@ -2,11 +2,8 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { DEVICE_ID as deviceId, USER_ID as userId } from '../src/config/identity';
-import type { BalluState } from '../src/services/llm-tools/smart-home/devices/ballu-asp100';
-import {
-  type DeviceCommand,
-  DeviceCommandError,
-} from '../src/services/llm-tools/smart-home/driver';
+import type { BalluState } from '../src/services/smart-home/devices/ballu-asp100';
+import { type DeviceCommand, DeviceCommandError } from '../src/services/smart-home/driver';
 import { createTestDatabase } from './database';
 import { createHomeTools } from './home-tools';
 

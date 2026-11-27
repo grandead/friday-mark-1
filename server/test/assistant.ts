@@ -1,6 +1,6 @@
 import type { Database } from '../src/services/database';
 import type { GenerateResponse } from '../src/services/llm';
-import type { DeviceDriver } from '../src/services/llm-tools/smart-home/driver';
+import type { DeviceDriver } from '../src/services/smart-home/driver';
 import { withServiceResources } from './service-resources';
 
 const { generateReply } = await import('../src/services/assistant/reply');

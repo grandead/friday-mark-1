@@ -88,6 +88,11 @@ test('service imports respect public boundaries and form an acyclic graph', () =
           assert.equal(source, 'llm-tools', 'Only llm-tools may import its smart-home module');
           assert.equal(targetPath, join(home, 'index.ts'));
         }
+        const miio = join(services, 'smart-home/miio');
+        if (targetPath.startsWith(`${miio}/`) && !path.startsWith(`${miio}/`)) {
+          const entry = join(miio, 'index.ts');
+          assert.equal(targetPath, entry, 'Import miIO through its public barrel');
+        }
       }
       ts.forEachChild(node, visit);
     }

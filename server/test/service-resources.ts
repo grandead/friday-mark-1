@@ -4,11 +4,11 @@ import { mock } from 'node:test';
 import * as paths from '../src/config/paths';
 import type { Database } from '../src/services/database';
 import type { GenerateResponse } from '../src/services/llm';
-import { DeviceCommandError, type DeviceDriver } from '../src/services/llm-tools/smart-home/driver';
+import { DeviceCommandError, type DeviceDriver } from '../src/services/smart-home/driver';
 
 const DATABASE_MODULE = new URL('../src/services/database/index.ts', import.meta.url);
 const LLM_MODULE = new URL('../src/services/llm/index.ts', import.meta.url);
-const DRIVER_MODULE = new URL('../src/services/llm-tools/smart-home/driver.ts', import.meta.url);
+const DRIVER_MODULE = new URL('../src/services/smart-home/driver.ts', import.meta.url);
 const STT_MODULE = new URL('../src/services/stt/index.ts', import.meta.url);
 const TTS_MODULE = new URL('../src/services/tts/index.ts', import.meta.url);
 const ASSISTANT_MODULE = new URL('../src/services/assistant/index.ts', import.meta.url);

@@ -11,7 +11,7 @@
     "check": "tsc --noEmit",
     "test": "tsx --experimental-test-module-mocks --test test/*.test.ts",
     "setup:whisper": "bash scripts/setup-whisper.sh",
-    "setup:home": "uv run scripts/home_miio.py --check && uv run scripts/home_syncleo.py --check",
+    "setup:home": "uv run scripts/home_syncleo.py --check",
     "voice": "node src/services/tts/supertonic.mjs",
     "send:wav": "tsx scripts/send-wav.ts",
     "test:whisper": "tsx --experimental-test-module-mocks scripts/smoke-whisper.ts",
@@ -22,7 +22,7 @@
     "llm:pull": "tsx scripts/ollama.ts pull",
     "test:assistant": "tsx --experimental-test-module-mocks scripts/smoke-assistant.ts",
     "test:home": "tsx --experimental-test-module-mocks scripts/smoke-home.ts",
-    "test:miio": "uv run --offline test/test_miio.py",
+    "test:miio": "tsx --experimental-test-module-mocks --test test/miio.test.ts",
     "test:ballu": "uv run --offline test/test_ballu.py",
     "lint": "biome check --error-on-warnings .",
     "lint:fix": "biome check --write --error-on-warnings .",
@@ -35,6 +35,7 @@
     "stt:process": "bash scripts/start-whisper.sh"
   },
   "dependencies": {
+    "@martyndevries/xiaomi-miio": "1.0.9",
     "@prisma/orm-postgres": "8.0.0-rc.25",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

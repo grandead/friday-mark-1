@@ -7,7 +7,10 @@ export const ERROR_MESSAGES = {
   hardware_unknown: 'The device did not confirm the required hardware.',
   unsupported: 'The setting is unavailable on this device.',
   not_confirmed: 'The device did not confirm the requested setting.',
+  device_rejected_command: 'The device rejected the command.',
   device_unreachable: 'Failed to obtain a response from the device.',
+  invalid_device_command: 'Invalid device command arguments.',
+  device_model_mismatch: 'The command belongs to another device model.',
   invalid_device_state: 'The device returned an invalid state.',
   invalid_miio_registration: 'Expected a valid IPv4 address and a 32-character hexadecimal token.',
   invalid_hommyn_registration:

@@ -1,20 +1,25 @@
 import type { Database } from '../src/services/database';
 import type { ToolCall } from '../src/services/llm';
-import type { DeviceDriver } from '../src/services/llm-tools/smart-home/driver';
+import type { DeviceDriver } from '../src/services/smart-home/driver';
 import { withServiceResources } from './service-resources';
 
 const { TOOL_DEFINITIONS, executeTools, getToolContext } = await import(
   '../src/services/llm-tools'
 );
 const { getHomeContext } = await import('../src/services/llm-tools/smart-home');
-const { DEVICE_MODELS } = await import('../src/services/llm-tools/smart-home/tools');
+const { VOICE_MODELS } = await import('../src/services/llm-tools/smart-home/tools');
 const { executeTool } = await import('../src/services/llm-tools/execute-tools');
 
-export const DEVICE_TOOLS = new Map(
-  DEVICE_MODELS.flatMap((model) =>
-    model.tools.map((tool) => [tool.name, { model, tool }] as const),
-  ),
-);
+const { DEVICE_MODELS } = await import('../src/services/smart-home/models');
+type Model = (typeof DEVICE_MODELS)[number];
+type ModelTool = Model['operations'][string];
+export const DEVICE_TOOLS = new Map<string, { model: Model; tool: ModelTool }>();
+for (const voice of VOICE_MODELS) {
+  const model = DEVICE_MODELS.find((entry) => entry.code === voice.code)!;
+  for (const tool of voice.tools) {
+    DEVICE_TOOLS.set(tool.name, { model, tool: model.operations[tool.operation] });
+  }
+}
 
 type CatalogueDevice = {
   id: string;
