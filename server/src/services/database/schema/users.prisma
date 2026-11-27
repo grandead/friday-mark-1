@@ -1,0 +1,19 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  displayName     String
+  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
+  interactions    Interaction[]
+  taskMemberships TaskUser[]
+  createdTasks    Task[]        @relation("TaskCreator")
+  deletedTasks    Task[]        @relation("TaskDeleter")
+
+  @@map("users")
+}

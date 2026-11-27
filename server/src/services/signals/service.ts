@@ -2,6 +2,8 @@ import { AsyncResource } from 'node:async_hooks';
 
 export interface Signals {
   'interaction.updated': { id: string };
+  'task.updated': { id: string };
+  'task.deleted': { id: string };
 }
 type Subscriptions = {
   [Name in keyof Signals]?: Map<symbol, (payload: Signals[Name]) => void | Promise<void>>;

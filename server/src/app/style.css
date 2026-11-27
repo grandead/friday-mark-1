@@ -975,3 +975,98 @@ textarea:focus-visible {
 .detail {
   gap: 0;
 }
+
+.tasks-page {
+  max-width: 960px;
+}
+.tasks-page .page-heading {
+  flex-wrap: wrap;
+}
+.task-panel {
+  overflow: hidden;
+}
+.task-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 22px;
+  background: #fbf9fc;
+  border-bottom: 1px solid var(--border);
+  color: #65596c;
+  font-size: 13px;
+}
+.task-progress strong {
+  color: var(--accent-ink);
+}
+.task-progress progress {
+  width: min(120px, 30%);
+  height: 7px;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--muted);
+}
+.task-progress progress::-webkit-progress-bar {
+  background: var(--muted);
+}
+.task-progress progress::-webkit-progress-value {
+  background: var(--accent-ink);
+}
+.task-progress progress::-moz-progress-bar {
+  background: var(--accent-ink);
+}
+.task-list {
+  margin: 0;
+  padding: 0 22px;
+  list-style: none;
+}
+.task-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  padding: 12px 0;
+}
+.task-row + .task-row {
+  border-top: 1px solid #eee9f0;
+}
+.task-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.task-check input {
+  width: 19px;
+  height: 19px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--accent-ink);
+}
+.task-check input:checked + span {
+  text-decoration: line-through;
+  color: #766d7a;
+}
+.task-description {
+  padding-left: 31px;
+  font-size: 13px;
+  color: #6b616f;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.task-actions {
+  display: flex;
+  gap: 4px;
+}
+.task-remove:hover:not(:disabled) {
+  background: #fff2ee;
+  color: var(--destructive);
+}
+.task-row .form-error {
+  grid-column: 1 / -1;
+}

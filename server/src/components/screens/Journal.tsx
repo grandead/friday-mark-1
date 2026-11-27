@@ -4,8 +4,9 @@ import { Cpu, Users, X } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { getJson } from '@/lib/get-json';
 import { userError } from '../../lib/errors';
-import { type Device, getJson, type User } from '../../lib/journal';
+import type { Device, User } from '../../lib/journal';
 import { InteractionList } from '../InteractionList';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 

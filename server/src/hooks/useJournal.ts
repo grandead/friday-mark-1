@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { getJson } from '@/lib/get-json';
 import { userError } from '../lib/errors';
-import { getJson, type Interaction, type InteractionPage } from '../lib/journal';
+import type { Interaction, InteractionPage } from '../lib/journal';
 
 function compareInteractions(a: Interaction, b: Interaction) {
   return b.startedAt.localeCompare(a.startedAt) || b.id.localeCompare(a.id);

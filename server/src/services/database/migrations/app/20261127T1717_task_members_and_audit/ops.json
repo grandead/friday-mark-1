@@ -1,0 +1,741 @@
+[
+  {
+    "id": "renameColumn.tasks.userId",
+    "label": "Rename column \"tasks\".\"userId\" to \"createdBy\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "createdBy",
+        "table": "tasks"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"userId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "userId"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"userId\" on \"tasks\""
+        }
+      },
+      {
+        "description": "ensure column \"createdBy\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "createdBy"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"createdBy\" on \"tasks\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "rename column \"userId\" to \"createdBy\"",
+        "sql": "ALTER TABLE \"public\".\"tasks\" RENAME COLUMN \"userId\" TO \"createdBy\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"createdBy\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "createdBy"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"createdBy\" on \"tasks\""
+        }
+      },
+      {
+        "description": "verify column \"userId\" no longer exists",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "userId"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"userId\" on \"tasks\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.public.tasks.tasks_userId_fkey.rename",
+    "label": "Rename foreign key \"tasks_userId_fkey\" to \"tasks_createdBy_fkey\" on \"tasks\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "tasks_createdBy_fkey",
+        "table": "tasks"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"tasks_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "tasks_userId_fkey",
+          "public",
+          "\"public\".\"tasks\""
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "constraint \"tasks_userId_fkey\" on \"tasks\""
+        }
+      },
+      {
+        "description": "ensure constraint \"tasks_createdBy_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "tasks_createdBy_fkey",
+          "public",
+          "\"public\".\"tasks\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"tasks_createdBy_fkey\" on \"tasks\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "rename foreign key \"tasks_userId_fkey\" to \"tasks_createdBy_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"tasks\" RENAME CONSTRAINT \"tasks_userId_fkey\" TO \"tasks_createdBy_fkey\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"tasks_createdBy_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "tasks_createdBy_fkey",
+          "public",
+          "\"public\".\"tasks\""
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "constraint \"tasks_createdBy_fkey\" on \"tasks\""
+        }
+      },
+      {
+        "description": "verify constraint \"tasks_userId_fkey\" no longer exists",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "tasks_userId_fkey",
+          "public",
+          "\"public\".\"tasks\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"tasks_userId_fkey\" on \"tasks\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "dropIndex.tasks.tasks_userId_idx",
+    "label": "Drop index \"tasks_userId_idx\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "tasks_userId_idx",
+        "table": "tasks"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"tasks_userId_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"tasks_userId_idx\""
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "index \"tasks_userId_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop index \"tasks_userId_idx\"",
+        "sql": "DROP INDEX \"public\".\"tasks_userId_idx\"",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"tasks_userId_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"tasks_userId_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"tasks_userId_idx\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.taskUsers",
+    "label": "Create table \"taskUsers\"",
+    "summary": "Creates table \"taskUsers\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "taskUsers"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"taskUsers\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"taskUsers\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"taskUsers\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"taskUsers\"",
+        "sql": "CREATE TABLE \"public\".\"taskUsers\" (\n  \"taskId\" uuid NOT NULL,\n  \"userId\" uuid NOT NULL,\n  PRIMARY KEY (\"taskId\", \"userId\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"taskUsers\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"taskUsers\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"taskUsers\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "column.tasks.createdAt",
+    "label": "Add column createdAt to tasks",
+    "summary": "Adds column createdAt to table tasks",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "createdAt",
+        "table": "tasks"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"createdAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "createdAt"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"createdAt\" on \"tasks\""
+        }
+      },
+      {
+        "description": "ensure table \"tasks\" is empty before adding NOT NULL column without default",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"public\".\"tasks\" LIMIT 1) AS \"result\"",
+        "params": [],
+        "meta": {
+          "requiredColumn": {
+            "table": "tasks",
+            "column": "createdAt",
+            "reason": "newField"
+          }
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"createdAt\"",
+        "sql": "ALTER TABLE \"public\".\"tasks\" ADD COLUMN \"createdAt\" timestamptz(3) NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"createdAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "createdAt"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"createdAt\" on \"tasks\""
+        }
+      },
+      {
+        "description": "verify column \"createdAt\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "createdAt",
+          "NO"
+        ]
+      },
+      {
+        "description": "verify column \"createdAt\" has type \"timestamp(3) with time zone\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "createdAt",
+          "timestamp(3) with time zone"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "setDefault.tasks.createdAt",
+    "label": "Set default on \"tasks\".\"createdAt\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "createdAt",
+        "table": "tasks"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"createdAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "createdAt"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"createdAt\" on \"tasks\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "set default on \"createdAt\"",
+        "sql": "ALTER TABLE \"public\".\"tasks\" ALTER COLUMN \"createdAt\" SET DEFAULT (now())"
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "column.public.tasks.deletedAt",
+    "label": "Add column \"deletedAt\" to \"tasks\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "deletedAt",
+        "table": "tasks"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"deletedAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "deletedAt"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"deletedAt\" on \"tasks\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"deletedAt\"",
+        "sql": "ALTER TABLE \"public\".\"tasks\" ADD COLUMN \"deletedAt\" timestamptz(3)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"deletedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "deletedAt"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"deletedAt\" on \"tasks\""
+        }
+      },
+      {
+        "description": "verify column \"deletedAt\" has type \"timestamp(3) with time zone\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "deletedAt",
+          "timestamp(3) with time zone"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.tasks.deletedBy",
+    "label": "Add column \"deletedBy\" to \"tasks\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "deletedBy",
+        "table": "tasks"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"deletedBy\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "deletedBy"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"deletedBy\" on \"tasks\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"deletedBy\"",
+        "sql": "ALTER TABLE \"public\".\"tasks\" ADD COLUMN \"deletedBy\" uuid"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"deletedBy\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "deletedBy"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"deletedBy\" on \"tasks\""
+        }
+      },
+      {
+        "description": "verify column \"deletedBy\" has type \"uuid\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "tasks",
+          "deletedBy",
+          "uuid"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.taskUsers.taskUsers_userId_taskId_idx",
+    "label": "Create index \"taskUsers_userId_taskId_idx\" on \"taskUsers\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "taskUsers_userId_taskId_idx",
+        "table": "taskUsers"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"taskUsers_userId_taskId_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"taskUsers_userId_taskId_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"taskUsers_userId_taskId_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"taskUsers_userId_taskId_idx\"",
+        "sql": "CREATE INDEX \"taskUsers_userId_taskId_idx\" ON \"public\".\"taskUsers\" (\"userId\", \"taskId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"taskUsers_userId_taskId_idx\" exists on \"taskUsers\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"taskUsers_userId_taskId_idx\"",
+          "i",
+          "I",
+          "\"public\".\"taskUsers\"",
+          "btree",
+          "[\"userId\",\"taskId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.tasks.tasks_createdBy_idx",
+    "label": "Create index \"tasks_createdBy_idx\" on \"tasks\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "tasks_createdBy_idx",
+        "table": "tasks"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"tasks_createdBy_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"tasks_createdBy_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"tasks_createdBy_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"tasks_createdBy_idx\"",
+        "sql": "CREATE INDEX \"tasks_createdBy_idx\" ON \"public\".\"tasks\" (\"createdBy\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"tasks_createdBy_idx\" exists on \"tasks\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"tasks_createdBy_idx\"",
+          "i",
+          "I",
+          "\"public\".\"tasks\"",
+          "btree",
+          "[\"createdBy\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.taskUsers.taskUsers_taskId_fkey",
+    "label": "Add foreign key \"taskUsers_taskId_fkey\" on \"taskUsers\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "taskUsers_taskId_fkey",
+        "table": "taskUsers"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"taskUsers_taskId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "taskUsers_taskId_fkey",
+          "public",
+          "\"public\".\"taskUsers\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"taskUsers_taskId_fkey\" on \"taskUsers\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"taskUsers_taskId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"taskUsers\"\nADD CONSTRAINT \"taskUsers_taskId_fkey\"\nFOREIGN KEY (\"taskId\")\nREFERENCES \"public\".\"tasks\" (\"id\")\nON DELETE CASCADE\nON UPDATE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"taskUsers_taskId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "taskUsers_taskId_fkey",
+          "public",
+          "\"public\".\"taskUsers\"",
+          "f",
+          "[\"taskId\"]",
+          "\"public\".\"tasks\"",
+          "[\"id\"]",
+          "c",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.taskUsers.taskUsers_userId_fkey",
+    "label": "Add foreign key \"taskUsers_userId_fkey\" on \"taskUsers\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "taskUsers_userId_fkey",
+        "table": "taskUsers"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"taskUsers_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "taskUsers_userId_fkey",
+          "public",
+          "\"public\".\"taskUsers\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"taskUsers_userId_fkey\" on \"taskUsers\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"taskUsers_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"taskUsers\"\nADD CONSTRAINT \"taskUsers_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"users\" (\"id\")\nON DELETE RESTRICT\nON UPDATE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"taskUsers_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "taskUsers_userId_fkey",
+          "public",
+          "\"public\".\"taskUsers\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"users\"",
+          "[\"id\"]",
+          "r",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.tasks.tasks_deletedBy_fkey",
+    "label": "Add foreign key \"tasks_deletedBy_fkey\" on \"tasks\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "tasks_deletedBy_fkey",
+        "table": "tasks"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"tasks_deletedBy_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "tasks_deletedBy_fkey",
+          "public",
+          "\"public\".\"tasks\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"tasks_deletedBy_fkey\" on \"tasks\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"tasks_deletedBy_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"tasks\"\nADD CONSTRAINT \"tasks_deletedBy_fkey\"\nFOREIGN KEY (\"deletedBy\")\nREFERENCES \"public\".\"users\" (\"id\")\nON DELETE RESTRICT\nON UPDATE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"tasks_deletedBy_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "tasks_deletedBy_fkey",
+          "public",
+          "\"public\".\"tasks\"",
+          "f",
+          "[\"deletedBy\"]",
+          "\"public\".\"users\"",
+          "[\"id\"]",
+          "r",
+          "c"
+        ]
+      }
+    ]
+  }
+]
