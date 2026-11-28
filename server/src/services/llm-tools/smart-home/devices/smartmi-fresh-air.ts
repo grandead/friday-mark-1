@@ -25,7 +25,7 @@ export const SMARTMI_FRESH_AIR = {
     {
       name: 'smartmi_set_power',
       description:
-        'Включить или выключить Smartmi Fresh Air по явной просьбе. Не использовать для отрицаний, цитат или вопросов о возможности действия.',
+        'Включить или выключить Smartmi Fresh Air. Перед изменением параметров выключенного бризера включи его.',
       schema: smartmiFreshAir.SET_POWER_SCHEMA,
       run: smartmiFreshAir.setPower,
       describe: (state: smartmiFreshAir.SmartmiState) => (state.power ? 'включён.' : 'выключен.'),

@@ -22,7 +22,7 @@ export const SMART_HUMIDIFIER_2 = {
     {
       name: 'xiaomi_humidifier_set_power',
       description:
-        'Включить или выключить Xiaomi Smart Humidifier 2 по явной просьбе. Не использовать для отрицаний, цитат или вопросов о возможности действия.',
+        'Включить или выключить Xiaomi Smart Humidifier 2. Перед изменением параметров выключенного увлажнителя включи его.',
       schema: smartHumidifier2.SET_POWER_SCHEMA,
       run: smartHumidifier2.setPower,
       describe: (state: smartHumidifier2.HumidifierState) =>

@@ -33,7 +33,7 @@ export async function generateResponse(
     think: hasTools,
     keep_alive: '15m',
     options: {
-      num_ctx: 8192,
+      num_ctx: 16384,
       num_predict: hasTools ? 2048 : 512,
       temperature: hasTools ? 0 : 0.6,
     },

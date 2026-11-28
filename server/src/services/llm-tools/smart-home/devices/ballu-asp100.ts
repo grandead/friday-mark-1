@@ -32,7 +32,7 @@ export const BALLU_ASP100 = {
     {
       name: 'ballu_set_power',
       description:
-        'Включить или выключить Ballu ASP-100 по явной просьбе. Не использовать для отдельного управления нагревателем.',
+        'Включить или выключить Ballu ASP-100. Перед изменением параметров выключенного бризера включи его. Не использовать для отдельного управления нагревателем.',
       schema: balluAsp100.SET_POWER_SCHEMA,
       run: balluAsp100.setPower,
       describe: (state: balluAsp100.BalluState) => (state.power ? 'включён.' : 'выключен.'),
