@@ -1,5 +1,4 @@
-import { DeviceCommandError } from '../device-error';
-import type { DeviceCommand } from '../driver';
+import { DeviceCommandError } from '../../utils';
 import { type Change, decode, type MiioSession, type State } from './session';
 
 const PROPERTIES = {
@@ -61,10 +60,10 @@ export async function readSmartmi(session: MiioSession, model: string) {
 
 export async function writeSmartmi(
   session: MiioSession,
-  command: DeviceCommand,
+  operation: string,
+  parameters: Record<string, unknown>,
   state: State,
 ): Promise<Change | undefined> {
-  const { operation, parameters } = command;
   if (operation === 'resetFilter') {
     if (!('filterHours' in state)) throw new DeviceCommandError('unsupported');
     await writeSetting(session, 'reset_filter1', []);

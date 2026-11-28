@@ -1,0 +1,102 @@
+[
+  {
+    "id": "createNativeEnumType.DeviceRegistrationKind",
+    "label": "Create enum type \"DeviceRegistrationKind\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "type",
+        "name": "DeviceRegistrationKind"
+      }
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "create enum type \"DeviceRegistrationKind\"",
+        "sql": "CREATE TYPE \"public\".\"DeviceRegistrationKind\" AS ENUM ('miioToken', 'syncleoToken')",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "alterType.homeDeviceTypes.registrationType",
+    "label": "Alter type of \"homeDeviceTypes\".\"registrationType\" to \"DeviceRegistrationKind\"",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "registrationType",
+        "table": "homeDeviceTypes"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"registrationType\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "homeDeviceTypes",
+          "registrationType"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"registrationType\" on \"homeDeviceTypes\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "alter type of \"registrationType\" to \"DeviceRegistrationKind\"",
+        "sql": "ALTER TABLE \"public\".\"homeDeviceTypes\" ALTER COLUMN \"registrationType\" TYPE \"DeviceRegistrationKind\" USING \"registrationType\"::text::\"public\".\"DeviceRegistrationKind\"",
+        "meta": {
+          "convertedColumn": {
+            "table": "homeDeviceTypes",
+            "column": "registrationType",
+            "by": "conversion"
+          }
+        }
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"registrationType\" has type \"DeviceRegistrationKind\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" WHERE (\"a\".\"attrelid\" = to_regclass($1) AND \"a\".\"attname\" = $2 AND \"a\".\"atttypid\" = to_regtype($3) AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "\"public\".\"homeDeviceTypes\"",
+          "registrationType",
+          "\"DeviceRegistrationKind\""
+        ]
+      }
+    ],
+    "meta": {
+      "warning": "TABLE_REWRITE"
+    }
+  },
+  {
+    "id": "dropNativeEnumType.DeviceRegistrationType",
+    "label": "Drop enum type \"DeviceRegistrationType\"",
+    "operationClass": "widening",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "type",
+        "name": "DeviceRegistrationType"
+      }
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "drop enum type \"DeviceRegistrationType\"",
+        "sql": "DROP TYPE \"public\".\"DeviceRegistrationType\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  }
+]

@@ -1,5 +1,4 @@
-import { DeviceCommandError } from '../device-error';
-import type { DeviceCommand } from '../driver';
+import { DeviceCommandError } from '../../utils';
 import { type Change, decode, type MiioSession, type State } from './session';
 
 type Properties = Record<string, readonly [number, number]>;
@@ -108,12 +107,13 @@ function collectProperties(state: State, request: Property[], rows: unknown) {
 
 export async function writeMiot(
   session: MiioSession,
-  command: DeviceCommand,
+  operation: string,
+  parameters: Record<string, unknown>,
   state: State,
   model: string,
 ): Promise<Change | undefined> {
-  const field = command.operation;
-  const wanted = command.parameters[field];
+  const field = operation;
+  const wanted = parameters[field];
   if (!WRITABLE.has(field) || !(field in state)) throw new DeviceCommandError('unsupported');
   if (
     model === 'cgllc.airm.cgdn1' &&

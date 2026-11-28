@@ -5,9 +5,16 @@ enum HomeDeviceKind {
   breezer
 }
 
-enum DeviceRegistrationType {
+enum DeviceModelCode {
+  BalluAsp100            @map("ballu-oneair-asp-100")
+  QingpingAirMonitorLite @map("qingping-air-monitor-lite")
+  SmartmiFreshAir        @map("smartmi-fresh-air")
+  XiaomiSmartHumidifier2 @map("xiaomi-smart-humidifier-2")
+}
+
+enum DeviceRegistrationKind {
   miioToken
-  hommynShareUrl
+  syncleoToken
 }
 
 model Home {
@@ -34,12 +41,12 @@ model Room {
 // Fixed model catalogue, populated by migrations, not by the device creation form.
 model HomeDeviceType {
   id               String                 @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  code             String                 @unique
+  code             DeviceModelCode        @unique
   displayName      String
   vendor           String
   model            String
   kind             HomeDeviceKind
-  registrationType DeviceRegistrationType
+  registrationType DeviceRegistrationKind
   devices          HomeDevice[]
 
   @@map("homeDeviceTypes")

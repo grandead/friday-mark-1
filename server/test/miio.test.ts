@@ -160,19 +160,16 @@ class ApplianceSocket extends EventEmitter {
 }
 let appliance: Appliance;
 mock.module('node:dgram', { namedExports: { createSocket: () => new ApplianceSocket() } });
-const { runDeviceCommand } = await import('../src/services/smart-home/driver');
+const { runCommand } = await import('../src/services/smart-home/drivers/miio');
 
 function start(model: Model) {
   appliance = new Appliance(model);
 }
 async function run(operation = 'state', value?: unknown) {
-  return (await runDeviceCommand({
-    transport: 'miio',
-    model: MODELS[appliance.model],
-    registrationData: { ip: IP, token: TOKEN_HEX },
-    operation,
-    parameters: { [operation]: value },
-  })) as Record<string, unknown>;
+  const name = `${MODELS[appliance.model]}.${operation}`;
+  return runCommand(name, { ip: IP, token: TOKEN_HEX }, { [operation]: value }) as Promise<
+    Record<string, unknown>
+  >;
 }
 
 async function expectCommandError(

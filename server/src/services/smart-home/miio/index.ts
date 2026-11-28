@@ -1,1 +1,0 @@
-export { runMiioCommand } from './command';

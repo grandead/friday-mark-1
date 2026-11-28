@@ -8,11 +8,7 @@ import { createTestDatabase } from './database';
 import { routes, withRouteResources } from './routes';
 
 const miio = { ip: '192.168.1.12', token: 'abcdef0123456789abcdef0123456789' };
-const hommyn = {
-  shareUrl:
-    'rusklimat://device-share/rusclimate/69/aabbccddeeff?token=0123456789abcdef0123456789abcdef&name=Ballu',
-};
-
+const balluCredentials = { ip: '192.0.2.1', token: 'b'.repeat(32) };
 async function createHomeDevice(db: Database, input: unknown) {
   const response = await withRouteResources({ db, recordingsDir: '' }, () =>
     routes.createDevice(
@@ -35,7 +31,7 @@ test('smart home migration seeds the model catalogue and keeps homes isolated', 
   assert.deepEqual(
     types.map((type) => [type.code, type.kind, type.registrationType]),
     [
-      ['ballu-oneair-asp-100', 'breezer', 'hommynShareUrl'],
+      ['ballu-oneair-asp-100', 'breezer', 'syncleoToken'],
       ['qingping-air-monitor-lite', 'airMonitor', 'miioToken'],
       ['smartmi-fresh-air', 'breezer', 'miioToken'],
       ['xiaomi-smart-humidifier-2', 'humidifier', 'miioToken'],
@@ -74,7 +70,7 @@ test('smart home migration seeds the model catalogue and keeps homes isolated', 
     roomId: rooms[1].id,
     typeId: balluType.id,
     displayName: 'Бризер',
-    registrationData: hommyn,
+    registrationData: balluCredentials,
   });
   assert.equal(humidifier.displayName, 'Увлажнитель');
   assert.equal('registrationData' in humidifier, false);
@@ -89,7 +85,7 @@ test('smart home migration seeds the model catalogue and keeps homes isolated', 
   assert.deepEqual(tree.rooms[0].devices[0].registrationData, miio);
   assert.deepEqual(
     (await db.orm.public.HomeDevice.firstOrThrow({ id: ballu.id })).registrationData,
-    hommyn,
+    balluCredentials,
   );
 
   await assert.rejects(
@@ -97,7 +93,7 @@ test('smart home migration seeds the model catalogue and keeps homes isolated', 
       roomId: rooms[0].id,
       typeId: balluType.id,
       displayName: 'Wrong format',
-      registrationData: miio,
+      registrationData: { ip: miio.ip },
     }),
     /Expected a/,
   );
@@ -106,7 +102,7 @@ test('smart home migration seeds the model catalogue and keeps homes isolated', 
       roomId: rooms[0].id,
       typeId: humidifierType.id,
       displayName: 'Wrong format',
-      registrationData: hommyn,
+      registrationData: { ip: miio.ip },
     }),
     /Expected a/,
   );
@@ -144,12 +140,12 @@ test('smart home migration seeds the model catalogue and keeps homes isolated', 
   );
 });
 
-test('registration schemas reject malformed credentials, extra fields and unrelated URLs', () => {
+test('registration schemas reject malformed credentials and extra fields', () => {
   assert.deepEqual(
     parseDeviceRegistration('miioToken', { ...miio, token: miio.token.toUpperCase() }),
     miio,
   );
-  assert.deepEqual(parseDeviceRegistration('hommynShareUrl', hommyn), hommyn);
+  assert.deepEqual(parseDeviceRegistration('syncleoToken', balluCredentials), balluCredentials);
   for (const value of [
     null,
     [],
@@ -166,17 +162,14 @@ test('registration schemas reject malformed credentials, extra fields and unrela
       },
     );
   }
-  for (const shareUrl of [
-    'rusklimat://device-share/rusclimate/70/aabbccddeeff?token=0123456789abcdef0123456789abcdef',
-    'rusklimat://device-share/rusclimate/69/aabbccddeeff?token=00000000000000000000000000000000',
-    'rusklimat://device-share/rusclimate/69/aabbccddeeff?token=test-token',
-    'https://example.com?token=secret',
-    'rusklimat://device-share/rusclimate/69/id',
-    'rusklimat://device-share/rusclimate/69/id?token=',
-    'rusklimat://unrelated/rusclimate/69/id?token=secret',
+  for (const value of [
+    { token: miio.token },
+    { ...miio, ip: '::1' },
+    { ...miio, token: '0'.repeat(32) },
+    { ...miio, port: 123 },
   ]) {
     assert.throws(
-      () => parseDeviceRegistration('hommynShareUrl', { shareUrl }),
+      () => parseDeviceRegistration('syncleoToken', value),
       /Invalid registration data/,
     );
   }

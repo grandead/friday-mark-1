@@ -69,7 +69,7 @@ Catalogue code: `ballu-oneair-asp-100`. The two installed breezers use HOMMYN, v
 
 ### Connection
 
-Store the HOMMYN device sharing link in `registrationData.shareUrl`. The adapter reads the MAC and token from that link, discovers the matching device through `_syncleo._udp.local.` over IPv4, then authenticates over local UDP. The server and device need the same local network with mDNS/multicast available. No cloud login is used for these commands. Treat the full sharing link as a credential; never put it in prompts or logs.
+Register the IPv4 address and 32-character hexadecimal token in `registrationData`. The adapter discovers the matching IPv4 address through `_syncleo._udp.local.` to obtain its UDP port and protocol metadata, then authenticates with the stored token. The server and device need the same local network with mDNS/multicast available. No cloud login is used for these commands. Keep the token out of prompts and logs.
 
 ### Commands
 
@@ -115,7 +115,7 @@ Only `power` is required in the parsed state. Other fields are included when rep
 - A missing required setting produces `unsupported`. A missing heater produces `heater_missing`; an unknown heater flag produces `hardware_unknown`. A write without matching confirmation produces `not_confirmed`; it may still have affected the physical device. Connection failures produce `device_unreachable`.
 - There is no tool for automatic CO₂ control or a CO₂ target. There is no separate heater on/off switch, room-temperature target, night-mode speed, ambient-sound volume, direct backlight switch, custom turbo duration, schedule or prefilter reset in this integration. Do not substitute eco mode or whole-device power for heater control.
 
-Implementation sources: [command schemas and handlers](src/services/smart-home/devices/ballu-asp100.ts), [wire mappings and acknowledgements](scripts/ballu_protocol.py), [discovery and connection](scripts/home_syncleo.py). The adapter pins `pysyncleo==0.4.1` and `zeroconf==0.154.0`.
+Implementation sources: [command schemas and handlers](src/services/smart-home/devices/ballu-asp100.ts), [wire mappings and acknowledgements](src/services/smart-home/drivers/syncleo/ballu_protocol.py), [discovery and connection](src/services/smart-home/drivers/syncleo/syncleo_adapter.py). The adapter pins `pysyncleo==0.4.1` and `zeroconf==0.154.0`.
 
 ## Verification
 

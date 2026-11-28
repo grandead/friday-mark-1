@@ -18,7 +18,7 @@ import type {
 } from '@prisma/orm-postgres/contract-types';
 
 export type StorageHash =
-  StorageHashBase<'317cf11f57056fdf9f3663f3b925ae35e7798a5eba3ddd39f54002419a4908fb'>;
+  StorageHashBase<'0b9125caa61665477e1e20f931c07837645ce59a5445bb8be4a4ed0dd299e839'>;
 export type ExecutionHash =
   ExecutionHashBase<'c040c23d3683c58e969a84020402bc4a5d98cd317e66d7b3f3cd7283bbcfb4b6'>;
 export type ProfileHash =
@@ -274,13 +274,25 @@ type FieldTypeOverrides = {
   readonly public: {
     readonly models: {
       readonly HomeDeviceType: {
+        readonly code: {
+          readonly output:
+            | 'ballu-oneair-asp-100'
+            | 'qingping-air-monitor-lite'
+            | 'smartmi-fresh-air'
+            | 'xiaomi-smart-humidifier-2';
+          readonly input:
+            | 'ballu-oneair-asp-100'
+            | 'qingping-air-monitor-lite'
+            | 'smartmi-fresh-air'
+            | 'xiaomi-smart-humidifier-2';
+        };
         readonly kind: {
           readonly output: 'humidifier' | 'airMonitor' | 'breezer';
           readonly input: 'humidifier' | 'airMonitor' | 'breezer';
         };
         readonly registrationType: {
-          readonly output: 'miioToken' | 'hommynShareUrl';
-          readonly input: 'miioToken' | 'hommynShareUrl';
+          readonly output: 'miioToken' | 'syncleoToken';
+          readonly input: 'miioToken' | 'syncleoToken';
         };
       };
       readonly Task: {
@@ -311,13 +323,25 @@ export type FieldInputTypes = FieldTypesFromDomain<
 type ColumnTypeOverrides = {
   readonly public: {
     readonly homeDeviceTypes: {
+      readonly code: {
+        readonly output:
+          | 'ballu-oneair-asp-100'
+          | 'qingping-air-monitor-lite'
+          | 'smartmi-fresh-air'
+          | 'xiaomi-smart-humidifier-2';
+        readonly input:
+          | 'ballu-oneair-asp-100'
+          | 'qingping-air-monitor-lite'
+          | 'smartmi-fresh-air'
+          | 'xiaomi-smart-humidifier-2';
+      };
       readonly kind: {
         readonly output: 'humidifier' | 'airMonitor' | 'breezer';
         readonly input: 'humidifier' | 'airMonitor' | 'breezer';
       };
       readonly registrationType: {
-        readonly output: 'miioToken' | 'hommynShareUrl';
-        readonly input: 'miioToken' | 'hommynShareUrl';
+        readonly output: 'miioToken' | 'syncleoToken';
+        readonly input: 'miioToken' | 'syncleoToken';
       };
     };
     readonly tasks: {
@@ -523,9 +547,10 @@ type ContractBase = Omit<
             readonly homeDeviceTypes: {
               columns: {
                 readonly code: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
+                  readonly dataType: 'pg/enum';
+                  readonly codecId: 'pg/enum@1';
                   readonly nullable: false;
+                  readonly typeParams: { readonly typeName: 'DeviceModelCode' };
                   readonly many: false;
                 };
                 readonly displayName: {
@@ -558,7 +583,7 @@ type ContractBase = Omit<
                   readonly dataType: 'pg/enum';
                   readonly codecId: 'pg/enum@1';
                   readonly nullable: false;
-                  readonly typeParams: { readonly typeName: 'DeviceRegistrationType' };
+                  readonly typeParams: { readonly typeName: 'DeviceRegistrationKind' };
                   readonly many: false;
                 };
                 readonly vendor: {
@@ -1130,9 +1155,18 @@ type ContractBase = Omit<
             };
           };
           readonly valueSet: {
-            readonly DeviceRegistrationType: {
+            readonly DeviceModelCode: {
               readonly kind: 'valueSet';
-              readonly values: readonly ['miioToken', 'hommynShareUrl'];
+              readonly values: readonly [
+                'ballu-oneair-asp-100',
+                'qingping-air-monitor-lite',
+                'smartmi-fresh-air',
+                'xiaomi-smart-humidifier-2',
+              ];
+            };
+            readonly DeviceRegistrationKind: {
+              readonly kind: 'valueSet';
+              readonly values: readonly ['miioToken', 'syncleoToken'];
             };
             readonly HomeDeviceKind: {
               readonly kind: 'valueSet';
@@ -1341,7 +1375,11 @@ type ContractBase = Omit<
             readonly fields: {
               readonly code: {
                 readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/enum@1';
+                  readonly typeParams: { readonly typeName: 'DeviceModelCode' };
+                };
               };
               readonly displayName: {
                 readonly nullable: false;
@@ -1368,7 +1406,7 @@ type ContractBase = Omit<
                 readonly type: {
                   readonly kind: 'scalar';
                   readonly codecId: 'pg/enum@1';
-                  readonly typeParams: { readonly typeName: 'DeviceRegistrationType' };
+                  readonly typeParams: { readonly typeName: 'DeviceRegistrationKind' };
                 };
               };
               readonly vendor: {

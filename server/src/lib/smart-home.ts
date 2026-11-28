@@ -1,13 +1,14 @@
+import type { DeviceModelCode } from '@/services/smart-home';
 import { requestError } from './errors';
 export type HomeDevice = { id: string; roomId: string; typeId: string; displayName: string };
 export type Room = { id: string; homeId: string; displayName: string; devices: HomeDevice[] };
 export type Home = { id: string; displayName: string; rooms: Room[] };
 export type DeviceType = {
   id: string;
-  code: string;
+  code: DeviceModelCode;
   displayName: string;
   kind: 'humidifier' | 'airMonitor' | 'breezer';
-  registrationType: 'miioToken' | 'hommynShareUrl';
+  registrationType: 'miioToken' | 'syncleoToken';
 };
 export type SmartHomeData = { homes: Home[]; deviceTypes: DeviceType[] };
 

@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { DeviceCommand } from '../src/services/smart-home/driver';
+import type { DeviceCommand } from './service-resources';
+
 import { withServiceResources } from './service-resources';
 
-const { DEVICE_TOOLS: TOOLS } = await import('./home-tools');
+const { DEVICE_TOOLS: TOOLS, runHomeOperation } = await import('./home-tools');
 
 const DEVICE_ID = '019ace9d-0000-7000-8000-000000000001';
 const QINGPING_STATE = { humidity: 40, temperature: 23.7, co2: 800, pm25: 5, pm10: 9 };
@@ -48,29 +49,20 @@ async function checkSettings() {
     const entry = TOOLS.get(name)!;
     assert.ok(entry, name);
     const input = { deviceId: DEVICE_ID, [field]: value };
-    const args = entry.tool.schema.parse(input);
-    const connection = {
-      model: entry.model.code,
-      transport: entry.model.transport,
-      registrationData: {},
-    };
+    const args = entry.schema.parse(input);
     const base = name.startsWith('qingping') ? QINGPING_STATE : { power: false };
     const state = { ...base, [field]: value };
     const calls: DeviceCommand[] = [];
     const driver = capture.bind(null, calls, state);
-    const result = await withServiceResources({ driver }, () =>
-      entry.tool.execute(args, connection),
-    );
+    const result = await withServiceResources({ driver }, () => runHomeOperation(entry, args));
     assert.equal(calls.length, 1, name);
-    assert.equal(calls[0].model, entry.model.code);
+    assert.equal(calls[0].model, entry.model);
     assert.equal(calls[0].operation, operation);
     assert.deepEqual(calls[0].parameters, { [field]: value });
     assert.equal(result.state[field], value);
     assert.match(result.description, /[А-Яа-яЁё]/);
     const missing = capture.bind(null, calls, base);
-    const pending = withServiceResources({ driver: missing }, () =>
-      entry.tool.execute(args, connection),
-    );
+    const pending = withServiceResources({ driver: missing }, () => runHomeOperation(entry, args));
     await assert.rejects(pending, { code: 'not_confirmed' }, name);
   }
 }
@@ -100,7 +92,7 @@ function checkArguments() {
     ['qingping_set_pm25_standard', 'pm25Standard', ['reserved', 2]],
   ];
   for (const [name, field, values] of invalid) {
-    const { tool } = TOOLS.get(name)!;
+    const tool = TOOLS.get(name)!;
     for (const value of values) {
       const input = { deviceId: DEVICE_ID, [field]: value };
       const result = tool.schema.safeParse(input);
@@ -108,7 +100,7 @@ function checkArguments() {
     }
   }
   for (const [name, , field, value] of CASES) {
-    const { tool } = TOOLS.get(name)!;
+    const tool = TOOLS.get(name)!;
     const input = { deviceId: DEVICE_ID, [field]: value, token: 'untrusted' };
     const extra = tool.schema.safeParse(input);
     assert.equal(extra.success, false);
@@ -120,18 +112,17 @@ function checkArguments() {
 }
 
 async function checkFilterReset() {
-  const { model, tool } = TOOLS.get('smartmi_reset_filter')!;
+  const tool = TOOLS.get('smartmi_reset_filter')!;
   const args = tool.schema.parse({ deviceId: DEVICE_ID });
-  const connection = { model: model.code, transport: model.transport, registrationData: {} };
   for (const counter of [undefined, 10]) {
     const state = { power: true, filterHours: counter };
     const driver = capture.bind(null, [], state);
-    const pending = withServiceResources({ driver }, () => tool.execute(args, connection));
+    const pending = withServiceResources({ driver }, () => runHomeOperation(tool, args));
     await assert.rejects(pending, { code: 'not_confirmed' });
   }
   const calls: DeviceCommand[] = [];
   const driver = capture.bind(null, calls, { power: true, filterHours: 0 });
-  const result = await withServiceResources({ driver }, () => tool.execute(args, connection));
+  const result = await withServiceResources({ driver }, () => runHomeOperation(tool, args));
   assert.equal(calls[0].operation, 'resetFilter');
   assert.equal(result.description, 'Счётчик фильтра сброшен.');
 }
@@ -155,17 +146,15 @@ async function checkDescriptions() {
       /Бак снят.*Недостаточно воды.*Ошибка датчика влажности.*Сработала защита/,
     ],
   ] as const) {
-    const { model, tool } = TOOLS.get(name)!;
+    const tool = TOOLS.get(name)!;
     const args = tool.schema.parse({ deviceId: DEVICE_ID });
-    const connection = { model: model.code, transport: model.transport, registrationData: {} };
     const driver = capture.bind(null, [], state);
-    const result = await withServiceResources({ driver }, () => tool.execute(args, connection));
+    const result = await withServiceResources({ driver }, () => runHomeOperation(tool, args));
     assert.match(result.description, expected);
   }
-  const { model, tool } = TOOLS.get('qingping_get_state')!;
+  const tool = TOOLS.get('qingping_get_state')!;
   const args = tool.schema.parse({ deviceId: DEVICE_ID });
-  const connection = { model: model.code, transport: model.transport, registrationData: {} };
   const driver = capture.bind(null, [], { humidity: 40 });
-  const pending = withServiceResources({ driver }, () => tool.execute(args, connection));
+  const pending = withServiceResources({ driver }, () => runHomeOperation(tool, args));
   await assert.rejects(pending, { code: 'invalid_device_state' });
 }

@@ -17,8 +17,8 @@ export const USER_ERRORS: Record<ErrorCode, string> = {
   invalid_device_state: 'Не удалось прочитать состояние прибора. Попробуйте ещё раз.',
   invalid_miio_registration:
     'Укажите корректный IPv4-адрес и токен из 32 шестнадцатеричных символов.',
-  invalid_hommyn_registration:
-    'Проверьте данные подключения Ballu. Нужна полная ссылка «Поделиться» из HOMMYN для ONEAIR ASP-100 с адресом прибора и токеном доступа.',
+  invalid_syncleo_registration:
+    'Укажите IPv4-адрес Ballu и ненулевой токен из 32 шестнадцатеричных символов.',
   invalid_form: 'Проверьте поля формы. Название должно содержать от 1 до 120 символов.',
   entity_not_found: 'Дом, комната или модель больше недоступны. Обновите страницу.',
   invalid_task_request: 'Проверьте адрес запроса и поля задачи.',

@@ -32,7 +32,7 @@ const DEVICE_MODELS = [
     vendor: 'Ballu',
     model: 'ONEAIR ASP-100',
     kind: 'breezer',
-    registrationType: 'hommynShareUrl',
+    registrationType: 'syncleoToken',
   },
 ] as const;
 
@@ -43,8 +43,16 @@ async function seedRecords(tx: Pick<Database, 'orm'>) {
   const user = await orm.User.select('id').first({ id: userId });
   if (!user) await orm.User.select('id').create({ id: userId, displayName: 'Кирилл' });
   for (const model of DEVICE_MODELS) {
-    const existing = await orm.HomeDeviceType.select('id').first({ code: model.code });
-    if (!existing) await orm.HomeDeviceType.select('id').create(model);
+    const existing = await orm.HomeDeviceType.select('id', 'registrationType').first({
+      code: model.code,
+    });
+    if (!existing) {
+      await orm.HomeDeviceType.select('id').create(model);
+    } else if (existing.registrationType !== model.registrationType) {
+      await orm.HomeDeviceType.where({ id: existing.id }).select('id').update({
+        registrationType: model.registrationType,
+      });
+    }
   }
 }
 try {

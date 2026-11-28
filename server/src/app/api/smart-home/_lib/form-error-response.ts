@@ -6,7 +6,7 @@ export function formErrorResponse(error: unknown) {
     const code =
       error.registrationType === 'miioToken'
         ? 'invalid_miio_registration'
-        : 'invalid_hommyn_registration';
+        : 'invalid_syncleo_registration';
     const body = errorResponse(code);
     return Response.json(body, { status: 400 });
   }

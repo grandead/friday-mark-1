@@ -1,4 +1,4 @@
-import { type Models, orm } from '../database';
+import { type Models, orm } from '../../database';
 
 type DeviceMetadata = Pick<Models.public_HomeDevice, 'id' | 'displayName'> & {
   type: Pick<Models.public_HomeDeviceType, 'code'>;

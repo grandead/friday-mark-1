@@ -88,10 +88,11 @@ test('service imports respect public boundaries and form an acyclic graph', () =
           assert.equal(source, 'llm-tools', 'Only llm-tools may import its smart-home module');
           assert.equal(targetPath, join(home, 'index.ts'));
         }
-        const miio = join(services, 'smart-home/miio');
-        if (targetPath.startsWith(`${miio}/`) && !path.startsWith(`${miio}/`)) {
-          const entry = join(miio, 'index.ts');
-          assert.equal(targetPath, entry, 'Import miIO through its public barrel');
+        const devices = join(services, 'smart-home/devices/');
+        const drivers = join(services, 'smart-home/drivers/');
+        if (path.startsWith(devices) && targetPath.startsWith(drivers)) {
+          const protocol = relative(drivers, targetPath).split('/')[0];
+          assert.equal(targetPath, join(drivers, protocol, 'index.ts'));
         }
       }
       ts.forEachChild(node, visit);
@@ -134,6 +135,11 @@ function inspectNesting(
   if (inArgument && ts.isCallExpression(node)) {
     recordViolation(node, 'call inside an argument', violations);
   }
+  if (inArgument && ts.isPropertyAssignment(node) && isInlineZodField(node)) {
+    inspectNesting(node.name, inFunction, true, violations);
+    inspectNesting(node.initializer, inFunction, false, violations);
+    return;
+  }
   if (ts.isCallExpression(node)) {
     inspectNesting(node.expression, inFunction, inArgument, violations);
     for (const argument of node.arguments) inspectNesting(argument, inFunction, true, violations);
@@ -142,6 +148,19 @@ function inspectNesting(
   const inside = inFunction || isFunction;
   const argument = inArgument && !isFunction;
   ts.forEachChild(node, (child) => inspectNesting(child, inside, argument, violations));
+}
+
+function isInlineZodField(field: ts.PropertyAssignment) {
+  const shape = field.parent;
+  const call = shape.parent;
+  if (!ts.isCallExpression(call) || call.arguments[0] !== shape) return false;
+  if (call.expression.getText() !== 'z.strictObject') return false;
+
+  let builder = field.initializer;
+  while (ts.isCallExpression(builder) && ts.isPropertyAccessExpression(builder.expression)) {
+    builder = builder.expression.expression;
+  }
+  return ts.isIdentifier(builder) && builder.text === 'z';
 }
 
 function isSingleLineArrow(node: ts.Node) {

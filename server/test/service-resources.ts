@@ -4,11 +4,23 @@ import { mock } from 'node:test';
 import * as paths from '../src/config/paths';
 import type { Database } from '../src/services/database';
 import type { GenerateResponse } from '../src/services/llm';
-import { DeviceCommandError, type DeviceDriver } from '../src/services/smart-home/driver';
 
 const DATABASE_MODULE = new URL('../src/services/database/index.ts', import.meta.url);
 const LLM_MODULE = new URL('../src/services/llm/index.ts', import.meta.url);
-const DRIVER_MODULE = new URL('../src/services/smart-home/driver.ts', import.meta.url);
+const MIIO_MODULE = new URL('../src/services/smart-home/drivers/miio/exchange.ts', import.meta.url);
+const SYNCLEO_MODULE = new URL(
+  '../src/services/smart-home/drivers/syncleo/adapter.ts',
+  import.meta.url,
+);
+
+export type DeviceCommand = {
+  model: string;
+  transport: 'miio' | 'syncleo';
+  operation: string;
+  parameters: Record<string, unknown>;
+  registrationData: unknown;
+};
+export type DeviceDriver = (command: DeviceCommand) => Promise<unknown>;
 const STT_MODULE = new URL('../src/services/stt/index.ts', import.meta.url);
 const TTS_MODULE = new URL('../src/services/tts/index.ts', import.meta.url);
 const ASSISTANT_MODULE = new URL('../src/services/assistant/index.ts', import.meta.url);
@@ -37,9 +49,13 @@ mock.module(LLM_MODULE, {
   cache: true,
   namedExports: { generateResponse: generate },
 });
-mock.module(DRIVER_MODULE, {
+mock.module(MIIO_MODULE, {
   cache: true,
-  namedExports: { DeviceCommandError, runDeviceCommand: runCommand },
+  namedExports: { exchange: exchangeMiio },
+});
+mock.module(SYNCLEO_MODULE, {
+  cache: true,
+  namedExports: { invokeAdapter: invokeSyncleo },
 });
 mock.module(STT_MODULE, {
   cache: true,
@@ -94,10 +110,31 @@ async function generate(...args: Parameters<GenerateResponse>) {
   return generateResponse(...args);
 }
 
-function runCommand(...args: Parameters<DeviceDriver>) {
+function exchangeMiio(
+  model: string,
+  operation: string,
+  registrationData: unknown,
+  parameters: Record<string, unknown>,
+) {
+  return runCommand({ model, transport: 'miio', registrationData, operation, parameters });
+}
+function invokeSyncleo(request: {
+  operation: string;
+  credentials: unknown;
+  args: Record<string, unknown>;
+}) {
+  return runCommand({
+    model: 'ballu-oneair-asp-100',
+    transport: 'syncleo',
+    registrationData: request.credentials,
+    operation: request.operation,
+    parameters: request.args,
+  });
+}
+function runCommand(command: DeviceCommand) {
   const driver = resources().driver;
   if (!driver) throw new Error('Device driver stub is missing');
-  return driver(...args);
+  return driver(command);
 }
 
 function transcribe(wav: Uint8Array) {

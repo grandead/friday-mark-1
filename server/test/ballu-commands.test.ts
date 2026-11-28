@@ -3,9 +3,10 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { DEVICE_ID as deviceId, USER_ID as userId } from '../src/config/identity';
 import type { BalluState } from '../src/services/smart-home/devices/ballu-asp100';
-import { type DeviceCommand, DeviceCommandError } from '../src/services/smart-home/driver';
+import { DeviceCommandError } from '../src/services/smart-home/utils';
 import { createTestDatabase } from './database';
 import { createHomeTools } from './home-tools';
+import type { DeviceCommand } from './service-resources';
 
 const secret = 'test-private-token';
 test('Ballu settings validate model, ranges, confirmation and safe capability failures', async (t) => {
@@ -23,7 +24,7 @@ test('Ballu settings validate model, ranges, confirmation and safe capability fa
       typeId: types.find((type) => type.code === code)!.id,
       displayName: code.startsWith('ballu') ? 'Ballu' : 'Xiaomi',
       registrationData: code.startsWith('ballu')
-        ? { shareUrl: `rusklimat://device-share/rusclimate/69/aabbcc?token=${secret}` }
+        ? { ip: '192.0.2.1', token: secret }
         : { ip: '192.168.1.2', token: 'a'.repeat(32) },
     });
   }

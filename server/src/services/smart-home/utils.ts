@@ -1,7 +1,7 @@
+import type { z } from 'zod';
 import { AppError, ERROR_MESSAGES } from '../../../shared/errors';
 
 const DEVICE_ERRORS = {
-  invalid_hommyn_registration: ERROR_MESSAGES.invalid_hommyn_registration,
   heater_missing: ERROR_MESSAGES.heater_missing,
   hardware_unknown: ERROR_MESSAGES.hardware_unknown,
   unsupported: ERROR_MESSAGES.unsupported,
@@ -12,10 +12,7 @@ const DEVICE_ERRORS = {
 } as const;
 
 export class DeviceCommandError extends AppError {
-  constructor(
-    readonly code: keyof typeof DEVICE_ERRORS,
-    readonly location?: { name: string; room: string },
-  ) {
+  constructor(readonly code: keyof typeof DEVICE_ERRORS) {
     super(code);
   }
 }
@@ -24,4 +21,14 @@ export function isDeviceError(body: unknown): body is { error: keyof typeof DEVI
   if (!body || typeof body !== 'object' || !('error' in body)) return false;
   if (typeof body.error !== 'string') return false;
   return Object.hasOwn(DEVICE_ERRORS, body.error);
+}
+
+export function parseState<State>(schema: z.ZodType<State>, response: unknown): State {
+  const parsed = schema.safeParse(response);
+  if (!parsed.success) throw new DeviceCommandError('invalid_device_state');
+  return parsed.data;
+}
+
+export function confirm(confirmed: boolean): asserts confirmed {
+  if (!confirmed) throw new DeviceCommandError('not_confirmed');
 }

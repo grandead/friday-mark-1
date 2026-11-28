@@ -1,12 +1,14 @@
 # /// script
 # requires-python = ">=3.14.2,<3.15"
-# dependencies = ["pysyncleo==0.4.1"]
+# dependencies = ["pysyncleo==0.4.1", "zeroconf==0.154.0"]
 # ///
 """No sockets or appliances: verify wire commands and fresh device acknowledgements."""
 import sys
 from pathlib import Path
 import unittest
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+from unittest.mock import AsyncMock, patch
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src/services/smart-home/drivers/syncleo'))
+import syncleo_adapter
 from ballu_protocol import BalluState, CommandError, steps_for, apply_command
 from pysyncleo.commands import CmdMode, CmdSpeed, CmdProgramData, CmdExpendables
 
@@ -36,19 +38,10 @@ class WireTests(unittest.TestCase):
                 self.assertEqual(steps[0].command.command_type.value, opcode)
                 self.assertEqual(steps[0].command.serialize(), payload)
 
-    def test_invalid_values_and_unsupported_commands_never_produce_writes(self):
-        for command in [
-            {"operation": "mode", "mode": "auto"}, {"operation": "mode", "mode": "random"},
-            {"operation": "speed", "speed": 0}, {"operation": "speed", "speed": 8},
-            {"operation": "speed", "speed": True}, {"operation": "speed", "speed": 2.5},
-            {"operation": "targetTemperature", "temperature": 26},
-            {"operation": "targetTemperature", "temperature": 4},
-            {"operation": "buttonSound", "enabled": "false"},
-            {"operation": "sound", "sound": "unknown"},
-            {"operation": "heater"}, {"operation": "resetPrefilter"},
-        ]:
-            with self.subTest(command=command), self.assertRaises(CommandError):
-                steps_for(command, BASE)
+    def test_unknown_operations_never_produce_writes(self):
+        for operation in ["heater", "resetPrefilter"]:
+            with self.subTest(operation=operation), self.assertRaises(CommandError):
+                steps_for({"operation": operation}, BASE)
 
     def test_missing_or_unknown_hardware_and_missing_fields(self):
         for capability, error in [(False, 'heater_missing'), (None, 'hardware_unknown')]:
@@ -73,6 +66,17 @@ class WireTests(unittest.TestCase):
         self.assertNotIn('co2', state.values)
         state.receive(CmdProgramData(b'', mode=0))
         self.assertFalse(state.values['co2SensorInstalled'])
+
+
+class AdapterTests(unittest.IsolatedAsyncioTestCase):
+    async def test_command_uses_registered_ip_and_token(self):
+        credentials = {"ip": "192.0.2.1", "token": "ab" * 16}
+        request = {"operation": "backlightAutoOff", "args": {"enabled": False}, "credentials": credentials}
+        with patch.object(syncleo_adapter, "discover", new_callable=AsyncMock) as discover, patch.object(syncleo_adapter, "run_device", new_callable=AsyncMock) as run:
+            result = await syncleo_adapter.execute(request)
+            discover.assert_awaited_once_with(ip=credentials["ip"])
+            run.assert_awaited_once_with(discover.return_value, credentials["token"], {"operation": "backlightAutoOff", "enabled": False})
+            self.assertIs(result, run.return_value)
 
 
 class AcknowledgementTests(unittest.IsolatedAsyncioTestCase):

@@ -72,30 +72,22 @@ def require_field(state, key):
 
 
 def steps_for(command, state):
-    operation = command.get("operation")
+    operation = command["operation"]
     if operation == "state":
         return []
     if operation == "power":
-        wanted = command.get("power")
-        if type(wanted) is not bool:
-            raise CommandError("unsupported")
+        wanted = command["power"]
         return [Step("power", wanted, CmdMode(1 if wanted else 0))]
     if operation == "mode":
-        mode = command.get("mode")
+        mode = command["mode"]
         values = {name: value for value, name in MODES.items() if name not in ("auto", "off")}
-        if mode not in values:
-            raise CommandError("unsupported")
         return [Step("mode", mode, CmdMode(values[mode]))]
     if operation == "speed":
-        speed = command.get("speed")
-        if type(speed) is not int or not 1 <= speed <= 7:
-            raise CommandError("unsupported")
+        speed = command["speed"]
         require_field(state, "speed")
         return [Step("mode", "manual", CmdMode(1)), Step("speed", speed, CmdSpeed(speed))]
     if operation == "targetTemperature":
-        temperature = command.get("temperature")
-        if type(temperature) is not int or not 5 <= temperature <= 25:
-            raise CommandError("unsupported")
+        temperature = command["temperature"]
         if state.get("heaterInstalled") is False:
             raise CommandError("heater_missing")
         if state.get("heaterInstalled") is not True:
@@ -103,17 +95,13 @@ def steps_for(command, state):
         require_field(state, "targetTemperature")
         return [Step("targetTemperature", temperature, CmdTargetTemperature(temperature))]
     if operation in ("buttonSound", "backlightAutoOff"):
-        enabled = command.get("enabled")
-        if type(enabled) is not bool:
-            raise CommandError("unsupported")
+        enabled = command["enabled"]
         require_field(state, operation)
         cls = CmdVolume if operation == "buttonSound" else CmdBacklight
         return [Step(operation, enabled, cls(enabled))]
     if operation == "sound":
-        sound = command.get("sound")
+        sound = command["sound"]
         values = {name: value for value, name in SOUNDS.items()}
-        if sound not in values:
-            raise CommandError("unsupported")
         require_field(state, "sound")
         return [Step("sound", sound, CmdAmount(values[sound]))]
     if operation == "resetFilter":

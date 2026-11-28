@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { AppError } from '../../shared/errors';
 import { userError } from '../lib/errors';
 import {
@@ -192,10 +191,7 @@ async function submitForm(event: FormEvent<HTMLFormElement>, form: FormState) {
       onSaved({ kind: 'room', value });
     } else {
       if (!type) throw new AppError('model_required');
-      const registrationData =
-        type.registrationType === 'miioToken'
-          ? { ip: field(data, 'ip'), token: field(data, 'token') }
-          : { shareUrl: field(data, 'shareUrl') };
+      const registrationData = { ip: field(data, 'ip'), token: field(data, 'token') };
       const value = await homeRequest<HomeDevice>('/api/smart-home/devices', {
         roomId: target.room.id,
         typeId: type.id,
@@ -224,69 +220,47 @@ function ConnectionFields({ type }: { type: DeviceType }) {
   return (
     <div className="connection-fields">
       <h3>Данные подключения</h3>
-      {type.registrationType === 'miioToken' ? (
-        <>
-          <Label className="form-field">
-            IP-адрес
-            <Input
-              required
-              inputMode="decimal"
-              autoComplete="off"
-              placeholder="192.168.1.100"
-              name="ip"
-            />
-          </Label>
-          <Label className="form-field" htmlFor="device-token">
-            Токен Xiaomi
-          </Label>
-          <div className="secret-field">
-            <Input
-              id="device-token"
-              required
-              type={visible ? 'text' : 'password'}
-              autoComplete="off"
-              spellCheck={false}
-              minLength={32}
-              maxLength={32}
-              pattern="[a-fA-F0-9]{32}"
-              title="32 символа: цифры и буквы от a до f"
-              name="token"
-              aria-describedby="token-hint"
-            />
-            <Button
-              type="button"
-              className="icon-button"
-              aria-label={visible ? 'Скрыть токен' : 'Показать токен'}
-              onClick={() => setVisible((value) => !value)}
-            >
-              {visible ? <EyeOff size={18} /> : <Eye size={18} />}
-            </Button>
-          </div>
-          <p className="field-hint" id="token-hint">
-            Локальный токен устройства из Xiaomi Cloud Tokens Extractor.
-          </p>
-        </>
-      ) : (
-        <>
-          <Label className="form-field">
-            Ссылка доступа HOMMYN
-            <Textarea
-              required
-              rows={3}
-              maxLength={4096}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="rusklimat://device-share/…"
-              name="shareUrl"
-              aria-describedby="share-hint"
-            />
-          </Label>
-          <p className="field-hint" id="share-hint">
-            В HOMMYN откройте настройки прибора → Управление доступом → Поделиться и скопируйте
-            ссылку.
-          </p>
-        </>
-      )}
+      <Label className="form-field">
+        IP-адрес
+        <Input
+          required
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder="192.168.1.100"
+          name="ip"
+        />
+      </Label>
+      <Label className="form-field" htmlFor="device-token">
+        {type.registrationType === 'miioToken' ? 'Токен Xiaomi' : 'Токен Ballu'}
+      </Label>
+      <div className="secret-field">
+        <Input
+          id="device-token"
+          required
+          type={visible ? 'text' : 'password'}
+          autoComplete="off"
+          spellCheck={false}
+          minLength={32}
+          maxLength={32}
+          pattern="[a-fA-F0-9]{32}"
+          title="32 символа: цифры и буквы от a до f"
+          name="token"
+          aria-describedby="token-hint"
+        />
+        <Button
+          type="button"
+          className="icon-button"
+          aria-label={visible ? 'Скрыть токен' : 'Показать токен'}
+          onClick={() => setVisible((value) => !value)}
+        >
+          {visible ? <EyeOff size={18} /> : <Eye size={18} />}
+        </Button>
+      </div>
+      <p className="field-hint" id="token-hint">
+        {type.registrationType === 'miioToken'
+          ? 'Локальный токен устройства из Xiaomi Cloud Tokens Extractor.'
+          : 'Локальный токен Ballu из 32 шестнадцатеричных символов.'}
+      </p>
       <p className="registration-note">
         Сохраним данные подключения. Связь с прибором на этом шаге не проверяется.
       </p>

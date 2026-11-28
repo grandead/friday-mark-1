@@ -294,8 +294,11 @@
               "code": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/text@1",
-                  "kind": "scalar"
+                  "codecId": "pg/enum@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "typeName": "DeviceModelCode"
+                  }
                 }
               },
               "displayName": {
@@ -335,7 +338,7 @@
                   "codecId": "pg/enum@1",
                   "kind": "scalar",
                   "typeParams": {
-                    "typeName": "DeviceRegistrationType"
+                    "typeName": "DeviceRegistrationKind"
                   }
                 }
               },
@@ -1107,13 +1110,23 @@
       "public": {
         "entries": {
           "native_enum": {
-            "DeviceRegistrationType": {
+            "DeviceModelCode": {
+              "kind": "postgres-enum",
+              "members": [
+                "ballu-oneair-asp-100",
+                "qingping-air-monitor-lite",
+                "smartmi-fresh-air",
+                "xiaomi-smart-humidifier-2"
+              ],
+              "typeName": "DeviceModelCode"
+            },
+            "DeviceRegistrationKind": {
               "kind": "postgres-enum",
               "members": [
                 "miioToken",
-                "hommynShareUrl"
+                "syncleoToken"
               ],
-              "typeName": "DeviceRegistrationType"
+              "typeName": "DeviceRegistrationKind"
             },
             "HomeDeviceKind": {
               "kind": "postgres-enum",
@@ -1183,9 +1196,18 @@
             "homeDeviceTypes": {
               "columns": {
                 "code": {
-                  "codecId": "pg/text@1",
-                  "dataType": "pg/text",
-                  "nullable": false
+                  "codecId": "pg/enum@1",
+                  "dataType": "pg/enum",
+                  "nullable": false,
+                  "typeParams": {
+                    "typeName": "DeviceModelCode"
+                  },
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "DeviceModelCode",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
                 },
                 "displayName": {
                   "codecId": "pg/text@1",
@@ -1225,11 +1247,11 @@
                   "dataType": "pg/enum",
                   "nullable": false,
                   "typeParams": {
-                    "typeName": "DeviceRegistrationType"
+                    "typeName": "DeviceRegistrationKind"
                   },
                   "valueSet": {
                     "entityKind": "valueSet",
-                    "entityName": "DeviceRegistrationType",
+                    "entityName": "DeviceRegistrationKind",
                     "namespaceId": "public",
                     "plane": "storage"
                   }
@@ -1963,11 +1985,20 @@
             }
           },
           "valueSet": {
-            "DeviceRegistrationType": {
+            "DeviceModelCode": {
+              "kind": "valueSet",
+              "values": [
+                "ballu-oneair-asp-100",
+                "qingping-air-monitor-lite",
+                "smartmi-fresh-air",
+                "xiaomi-smart-humidifier-2"
+              ]
+            },
+            "DeviceRegistrationKind": {
               "kind": "valueSet",
               "values": [
                 "miioToken",
-                "hommynShareUrl"
+                "syncleoToken"
               ]
             },
             "HomeDeviceKind": {
@@ -1991,7 +2022,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "317cf11f57056fdf9f3663f3b925ae35e7798a5eba3ddd39f54002419a4908fb"
+    "storageHash": "0b9125caa61665477e1e20f931c07837645ce59a5445bb8be4a4ed0dd299e839"
   },
   "execution": {
     "executionHash": "c040c23d3683c58e969a84020402bc4a5d98cd317e66d7b3f3cd7283bbcfb4b6",

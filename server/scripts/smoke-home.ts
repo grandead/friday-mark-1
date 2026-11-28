@@ -4,10 +4,11 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { DEVICE_ID as deviceId, USER_ID as userId } from '../src/config/identity';
 import { generateResponse } from '../src/services/llm/generate-response';
-import { type DeviceCommand, DeviceCommandError } from '../src/services/smart-home/driver';
+import { DeviceCommandError } from '../src/services/smart-home/utils';
 import { createAssistant } from '../test/assistant';
 import { createTestDatabase } from '../test/database';
 import { createHomeTools } from '../test/home-tools';
+import type { DeviceCommand } from '../test/service-resources';
 
 const database = await createTestDatabase();
 const db = database.db;
@@ -29,12 +30,7 @@ try {
       const type = types.find((item) => item.code === code);
       assert.ok(type, `Missing device type: ${code}`);
       const displayName = code.includes('humidifier') ? 'Увлажнитель' : 'Бризер';
-      const registrationData: Record<string, string> = code.startsWith('ballu')
-        ? {
-            shareUrl:
-              'rusklimat://device-share/rusclimate/69/aabbccddeeff?token=0123456789abcdef0123456789abcdef',
-          }
-        : { ip: '192.168.1.2', token: 'a'.repeat(32) };
+      const registrationData = { ip: '192.168.1.2', token: 'a'.repeat(32) };
       await db.orm.public.HomeDevice.select('id').create({
         roomId: room.id,
         typeId: type.id,

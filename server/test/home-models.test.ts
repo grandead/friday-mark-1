@@ -2,17 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { z } from 'zod';
 import type { Database } from '../src/services/database';
-import {
-  type DeviceCommand,
-  DeviceCommandError,
-  type DeviceDriver,
-} from '../src/services/smart-home/driver';
-import { createHomeTools, DEVICE_TOOLS as TOOLS } from './home-tools';
+import { DeviceCommandError } from '../src/services/smart-home/utils';
+import { createHomeTools, runHomeOperation, DEVICE_TOOLS as TOOLS } from './home-tools';
+import type { DeviceCommand, DeviceDriver } from './service-resources';
 import { withServiceResources } from './service-resources';
 
 const { TOOL_DEFINITIONS } = await import('../src/services/llm-tools');
 
-const { executeDeviceCommand } = await import('../src/services/smart-home');
+const { balluAsp100, smartmiFreshAir } = await import('../src/services/smart-home');
 
 const DEVICE_ID = '019ace9d-0000-7000-8000-000000000001';
 const READ_CALL = { function: { name: 'smartmi_get_state', arguments: { deviceId: DEVICE_ID } } };
@@ -28,7 +25,7 @@ test('executor trusts stored credentials and preserves journal failures', checkS
 
 function checkDefinitions() {
   const names = new Set<string>();
-  for (const [name, { tool }] of TOOLS) {
+  for (const [name, tool] of TOOLS) {
     assert.equal(names.has(name), false);
     names.add(name);
     const definition = TOOL_DEFINITIONS.find((item) => item.function.name === name)!;
@@ -44,13 +41,8 @@ function checkDefinitions() {
 async function run(name: string, args: Record<string, unknown>, driver: DeviceDriver) {
   const entry = TOOLS.get(name)!;
   const input = { deviceId: DEVICE_ID, ...args };
-  const parsed = entry.tool.schema.parse(input);
-  const connection = {
-    model: entry.model.code,
-    transport: entry.model.transport,
-    registrationData: {},
-  };
-  return withServiceResources({ driver }, () => entry.tool.execute(parsed, connection));
+  const parsed = entry.schema.parse(input);
+  return withServiceResources({ driver }, () => runHomeOperation(entry, parsed));
 }
 
 async function checkStates() {
@@ -197,40 +189,41 @@ function executeTestTool(
   return tools.execute(id, sequence, call);
 }
 
-test('registered device commands validate inputs, choose the transport and return only confirmed state', async () => {
-  const { client, device, writes, collection } = fixture();
+test('direct model commands select their driver and require the requested setting in its response', async () => {
   const calls: DeviceCommand[] = [];
-  const driver = captureRequest.bind(null, calls);
-  const resources = { db: client, driver };
-  const power = { operation: 'power', power: true };
-  for (const [code, transport] of [
-    ['smartmi-fresh-air', 'miio'],
-    ['ballu-oneair-asp-100', 'syncleo'],
-  ]) {
-    device.type.code = code;
-    const result = await withServiceResources(resources, () =>
-      executeDeviceCommand(DEVICE_ID, power),
+  const resources = { driver: captureRequest.bind(null, calls) };
+  const credentials = { ip: '192.0.2.1', token: 'stored-token' };
+  for (const [model, transport] of [
+    [smartmiFreshAir, 'miio'],
+    [balluAsp100, 'syncleo'],
+  ] as const) {
+    const state = await withServiceResources(resources, () =>
+      model.setPower(credentials, { power: true }),
     );
-    assert.deepEqual(result, { power: true });
+    assert.deepEqual(state, { power: true });
     const request = calls.at(-1);
     assert.equal(request?.transport, transport);
-    assert.deepEqual(request?.registrationData, device.registrationData);
+    assert.deepEqual(request?.registrationData, credentials);
+    const mismatch = withServiceResources(resources, () =>
+      model.setPower(credentials, { power: false }),
+    );
+    await assert.rejects(mismatch, { code: 'not_confirmed' });
+    const malformed = { driver: async () => ({ power: false, humidity: 101 }) };
+    const invalidState = withServiceResources(malformed, () =>
+      model.setPower(credentials, { power: true }),
+    );
+    await assert.rejects(invalidState, { code: 'invalid_device_state' });
+    for (const args of [
+      { power: 'yes' },
+      { power: true, token: 'unexpected' },
+      { power: true, deviceId: DEVICE_ID },
+    ]) {
+      assert.equal(model.SET_POWER_SCHEMA.safeParse(args).success, false);
+    }
   }
-  for (const command of [
-    { operation: 'speed', speed: 8 },
-    { operation: 'power', power: 'yes' },
-    { ...power, token: 'untrusted' },
-    { ...power, deviceId: 'another-device' },
-  ]) {
-    const pending = withServiceResources(resources, () => executeDeviceCommand(DEVICE_ID, command));
-    await assert.rejects(pending, { code: 'invalid_device_command' });
-  }
-  device.type.code = 'qingping-air-monitor-lite';
-  const unsupported = withServiceResources(resources, () => executeDeviceCommand(DEVICE_ID, power));
-  await assert.rejects(unsupported, { code: 'unsupported' });
-  collection.first = returnState.bind(null, null);
-  const missing = withServiceResources(resources, () => executeDeviceCommand(DEVICE_ID, power));
-  await assert.rejects(missing, { code: 'entity_not_found' });
-  assert.equal(calls.length, 2);
-  assert.equal(writes.length, 0);
+  const missing = withServiceResources(resources, () =>
+    balluAsp100.setBacklightAutoOff(credentials, { enabled: false }),
+  );
+  await assert.rejects(missing, { code: 'not_confirmed' });
+  assert.equal(calls.length, 5);
 });

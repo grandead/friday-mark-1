@@ -6,7 +6,7 @@ import {
   MiioTimeoutError,
   MiioTransport,
 } from '@martyndevries/xiaomi-miio';
-import { DeviceCommandError } from '../device-error';
+import { DeviceCommandError } from '../../utils';
 
 export type State = Record<string, unknown>;
 export type Change = { field: string; wanted: unknown };

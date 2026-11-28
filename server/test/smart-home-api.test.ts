@@ -34,12 +34,11 @@ test('smart home API creates a nested tree and never returns connection credenti
   assert.equal(roomResponse.statusCode, 201);
   const room = roomResponse.json();
   const miio = { ip: '192.168.1.12', token: 'abcdef0123456789abcdef0123456789' };
-  const shareUrl =
-    'rusklimat://device-share/rusclimate/69/aabbccddeeff?token=0123456789abcdef0123456789abcdef';
+  const ballu = { ip: '192.0.2.1', token: '0123456789abcdef0123456789abcdef' };
   const types = initial.deviceTypes as Array<{ id: string; registrationType: string }>;
   for (const [registrationType, registrationData] of [
     ['miioToken', miio],
-    ['hommynShareUrl', { shareUrl }],
+    ['syncleoToken', ballu],
   ] as const) {
     const typeId = types.find((type) => type.registrationType === registrationType)!.id;
     const response = await post('devices', {
@@ -59,7 +58,7 @@ test('smart home API creates a nested tree and never returns connection credenti
   const tree = treeResponse.json();
   assert.equal(tree.homes.find((h: { id: string }) => h.id === home.id).rooms[0].devices.length, 2);
   assert.deepEqual(tree.homes.find((h: { id: string }) => h.id === other.id).rooms, []);
-  for (const secret of ['registrationData', miio.token, miio.ip, shareUrl])
+  for (const secret of ['registrationData', miio.token, miio.ip, ballu.ip, ballu.token])
     assert.equal(treeResponse.body.includes(secret), false);
 
   for (const displayName of ['', '   ', 'a'.repeat(121)])
@@ -82,11 +81,18 @@ test('smart home API creates a nested tree and never returns connection credenti
   assert.match(invalid.json().message, /IPv4/);
   assert.equal(invalid.json().code, 'invalid_miio_registration');
   assert.doesNotMatch(invalid.body, /[А-Яа-яЁё]/);
+  const rejectedBallu = await post('devices', {
+    ...input,
+    typeId: types.find((type) => type.registrationType === 'syncleoToken')!.id,
+    registrationData: { token: ballu.token },
+  });
+  assert.equal(rejectedBallu.statusCode, 400);
+  assert.equal(rejectedBallu.json().code, 'invalid_syncleo_registration');
   const invalidHome = await post('homes', { displayName: '' });
   assert.equal(invalidHome.json().code, 'invalid_form');
   assert.doesNotMatch(invalidHome.body, /[А-Яа-яЁё]/);
   assert.equal(
-    (await post('devices', { ...input, registrationType: 'hommynShareUrl' })).statusCode,
+    (await post('devices', { ...input, registrationType: 'syncleoToken' })).statusCode,
     400,
   );
   assert.equal(

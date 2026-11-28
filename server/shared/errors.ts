@@ -13,8 +13,8 @@ export const ERROR_MESSAGES = {
   device_model_mismatch: 'The command belongs to another device model.',
   invalid_device_state: 'The device returned an invalid state.',
   invalid_miio_registration: 'Expected a valid IPv4 address and a 32-character hexadecimal token.',
-  invalid_hommyn_registration:
-    'Expected a HOMMYN ASP-100 share URL with a MAC address and a nonzero 32-character hexadecimal token.',
+  invalid_syncleo_registration:
+    'Expected an IPv4 address and a nonzero 32-character hexadecimal Ballu token.',
   invalid_form: 'Invalid form fields. Names must contain 1 to 120 characters.',
   entity_not_found: 'The home, room or device model was not found.',
   invalid_task_request: 'Invalid task fields or identifiers.',

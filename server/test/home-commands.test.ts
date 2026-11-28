@@ -3,10 +3,11 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { DEVICE_ID as deviceId, USER_ID as userId } from '../src/config/identity';
 import type { ChatMessage, ToolCall, ToolDefinition } from '../src/services/llm';
-import { type DeviceCommand, DeviceCommandError } from '../src/services/smart-home/driver';
+import { DeviceCommandError } from '../src/services/smart-home/utils';
 import { createAssistant } from './assistant';
 import { createTestDatabase } from './database';
 import { createHomeTools } from './home-tools';
+import type { DeviceCommand } from './service-resources';
 
 const secret = 'abcdef0123456789abcdef0123456789';
 const call = (name: string, args: Record<string, unknown>): ToolCall => ({

@@ -1,0 +1,80 @@
+[
+  {
+    "id": "createNativeEnumType.DeviceModelCode",
+    "label": "Create enum type \"DeviceModelCode\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "type",
+        "name": "DeviceModelCode"
+      }
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "create enum type \"DeviceModelCode\"",
+        "sql": "CREATE TYPE \"public\".\"DeviceModelCode\" AS ENUM ('ballu-oneair-asp-100', 'qingping-air-monitor-lite', 'smartmi-fresh-air', 'xiaomi-smart-humidifier-2')",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "alterType.homeDeviceTypes.code",
+    "label": "Alter type of \"homeDeviceTypes\".\"code\" to \"DeviceModelCode\"",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "code",
+        "table": "homeDeviceTypes"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"code\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "homeDeviceTypes",
+          "code"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"code\" on \"homeDeviceTypes\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "alter type of \"code\" to \"DeviceModelCode\"",
+        "sql": "ALTER TABLE \"public\".\"homeDeviceTypes\" ALTER COLUMN \"code\" TYPE \"DeviceModelCode\" USING \"code\"::\"public\".\"DeviceModelCode\"",
+        "meta": {
+          "convertedColumn": {
+            "table": "homeDeviceTypes",
+            "column": "code",
+            "by": "conversion"
+          }
+        }
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"code\" has type \"DeviceModelCode\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" WHERE (\"a\".\"attrelid\" = to_regclass($1) AND \"a\".\"attname\" = $2 AND \"a\".\"atttypid\" = to_regtype($3) AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "\"public\".\"homeDeviceTypes\"",
+          "code",
+          "\"DeviceModelCode\""
+        ]
+      }
+    ],
+    "meta": {
+      "warning": "TABLE_REWRITE"
+    }
+  }
+]

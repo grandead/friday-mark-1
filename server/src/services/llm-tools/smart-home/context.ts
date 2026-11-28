@@ -1,4 +1,4 @@
-import { listHomeDevices } from '../../smart-home';
+import { listHomeDevices } from './list-devices';
 import { VOICE_MODELS } from './tools';
 
 const INSTRUCTIONS = `Умный дом. Управляй приборами через инструменты.
@@ -15,8 +15,8 @@ const INSTRUCTIONS = `Умный дом. Управляй приборами ч�
 type CatalogueDevice = Awaited<ReturnType<typeof listHomeDevices>>[number];
 
 function describeDevice(device: CatalogueDevice) {
-  const model = VOICE_MODELS.find((model) => model.code === device.model);
-  const commands = model?.tools.map((tool) => tool.name) ?? [];
+  const model = VOICE_MODELS[device.model];
+  const commands = model.tools.map((tool) => tool.name);
   return { ...device, commands };
 }
 
