@@ -4,7 +4,6 @@ node_modules/
 recordings/
 .env
 .DS_Store
-__pycache__/
 
 .next/
 *.tsbuildinfo

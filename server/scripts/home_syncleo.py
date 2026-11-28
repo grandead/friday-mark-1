@@ -1,1 +1,0 @@
-../src/services/smart-home/drivers/syncleo/syncleo_adapter.py

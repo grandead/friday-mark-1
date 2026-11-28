@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { type DeviceCredentials, runCommand } from '../drivers/syncleo';
+import type { DeviceCredentials } from '../drivers/syncleo';
+import { exchangeBallu } from '../profiles/ballu-asp100';
 import { confirm, parseState } from '../utils';
 
 export const GET_STATE_SCHEMA = z.strictObject({});
@@ -55,7 +56,7 @@ export async function getState(
   credentials: DeviceCredentials,
   args: z.infer<typeof GET_STATE_SCHEMA>,
 ): Promise<BalluState> {
-  const response = await runCommand('state', credentials, args);
+  const response = await exchangeBallu(credentials, { ...args, name: 'state' });
   return parseState(BALLU_STATE, response);
 }
 
@@ -63,7 +64,7 @@ export async function setPower(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_POWER_SCHEMA>,
 ) {
-  const response = await runCommand('power', credentials, args);
+  const response = await exchangeBallu(credentials, { ...args, name: 'power' });
   const state = parseState(BALLU_STATE, response);
   confirm(state.power === args.power);
   return state;
@@ -73,7 +74,7 @@ export async function setMode(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_MODE_SCHEMA>,
 ) {
-  const response = await runCommand('mode', credentials, args);
+  const response = await exchangeBallu(credentials, { ...args, name: 'mode' });
   const state = parseState(BALLU_STATE, response);
   confirm(state.mode === args.mode && state.power);
   return state;
@@ -83,7 +84,7 @@ export async function setSpeed(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_SPEED_SCHEMA>,
 ) {
-  const response = await runCommand('speed', credentials, args);
+  const response = await exchangeBallu(credentials, { ...args, name: 'speed' });
   const state = parseState(BALLU_STATE, response);
   confirm(state.speed === args.speed && state.mode === 'manual' && state.power);
   return state;
@@ -93,7 +94,7 @@ export async function setBacklightAutoOff(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_BACKLIGHT_AUTO_OFF_SCHEMA>,
 ) {
-  const response = await runCommand('backlightAutoOff', credentials, args);
+  const response = await exchangeBallu(credentials, { ...args, name: 'backlightAutoOff' });
   const state = parseState(BALLU_STATE, response);
   confirm(state.backlightAutoOff === args.enabled);
   return state;
@@ -103,7 +104,7 @@ export async function setButtonSound(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_BUTTON_SOUND_SCHEMA>,
 ) {
-  const response = await runCommand('buttonSound', credentials, args);
+  const response = await exchangeBallu(credentials, { ...args, name: 'buttonSound' });
   const state = parseState(BALLU_STATE, response);
   confirm(state.buttonSound === args.enabled);
   return state;
@@ -113,7 +114,7 @@ export async function resetFilter(
   credentials: DeviceCredentials,
   args: z.infer<typeof RESET_FILTER_SCHEMA>,
 ) {
-  const response = await runCommand('resetFilter', credentials, args);
+  const response = await exchangeBallu(credentials, { ...args, name: 'resetFilter' });
   const state = parseState(BALLU_STATE, response);
   confirm(state.filterCounter === 0);
   return state;
@@ -123,7 +124,7 @@ export async function setSound(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_SOUND_SCHEMA>,
 ) {
-  const response = await runCommand('sound', credentials, args);
+  const response = await exchangeBallu(credentials, { ...args, name: 'sound' });
   const state = parseState(BALLU_STATE, response);
   confirm(state.sound === args.sound);
   return state;
@@ -133,7 +134,7 @@ export async function setTemperature(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_TEMPERATURE_SCHEMA>,
 ) {
-  const response = await runCommand('targetTemperature', credentials, args);
+  const response = await exchangeBallu(credentials, { ...args, name: 'targetTemperature' });
   const state = parseState(BALLU_STATE, response);
   confirm(state.targetTemperature === args.temperature && state.heaterInstalled === true);
   return state;

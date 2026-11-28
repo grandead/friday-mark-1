@@ -20,7 +20,7 @@ Hardware: `zhimi.airfresh.va4`; `va2` is also supported, without heater control.
 
 No known local command sets a target temperature, target CO₂ or arbitrary motor RPM. `app_extra` is an undocumented service value and reads as null on this VA4. The separate legacy `led` field also reads as null; screen control uses `led_level`. No CO₂ calibration command was established. We do not expose raw RPC, Wi-Fi provisioning or firmware updates as voice tools.
 
-Sources: [python-miio implementation](https://python-miio.readthedocs.io/en/stable/_modules/miio/integrations/airpurifier/zhimi/airfresh.html), [Xiaomi VA4 specification](https://miot-spec.org/miot-spec-v2/instance?type=urn:miot-spec-v2:device:air-fresh:0000A012:zhimi-va4:2).
+Sources: [Smartmi wire commands](src/services/smart-home/drivers/miio/smartmi.ts), [Xiaomi VA4 specification](https://miot-spec.org/miot-spec-v2/instance?type=urn:miot-spec-v2:device:air-fresh:0000A012:zhimi-va4:2).
 
 ## Xiaomi Smart Humidifier 2 — 9 tools
 
@@ -61,7 +61,7 @@ Supported protocol models: `cgllc.airm.cgdn1` and `cgllc.airm.cgd1st`. The regis
 
 Zero disables the screen/power timeout and auto-slide; monitoring interval zero means unset. Missing optional settings fail as unsupported, without writing. Spec v3 also lists night hours, timezone, screensaver type, page order, LED thresholds and CO₂ reset. Their full behavior, encoding or safe completion has not been verified; successful reads alone are not enough to offer these controls. They are not exposed as raw numeric/string commands. The old setting actions duplicate property writes. MQTT is a separate connection mode and is not configured by these tools.
 
-Sources: [python-miio implementation](https://python-miio.readthedocs.io/en/stable/_modules/miio/airqualitymonitor_miot.html), [Xiaomi CGDN1 specification](https://miot-spec.org/miot-spec-v2/instance?type=urn:miot-spec-v2:device:air-monitor:0000A008:cgllc-cgdn1:3), [Xiaomi CGD1ST specification](https://miot-spec.org/miot-spec-v2/instance?type=urn:miot-spec-v2:device:air-monitor:0000A008:cgllc-cgd1st:2).
+Sources: [MIoT property mappings](src/services/smart-home/drivers/miio/miot.ts), [Xiaomi CGDN1 specification](https://miot-spec.org/miot-spec-v2/instance?type=urn:miot-spec-v2:device:air-monitor:0000A008:cgllc-cgdn1:3), [Xiaomi CGD1ST specification](https://miot-spec.org/miot-spec-v2/instance?type=urn:miot-spec-v2:device:air-monitor:0000A008:cgllc-cgd1st:2).
 
 ## Ballu ONEAIR ASP-100 — 9 tools
 
@@ -69,7 +69,7 @@ Catalogue code: `ballu-oneair-asp-100`. The two installed breezers use HOMMYN, v
 
 ### Connection
 
-Register the IPv4 address and 32-character hexadecimal token in `registrationData`. The adapter discovers the matching IPv4 address through `_syncleo._udp.local.` to obtain its UDP port and protocol metadata, then authenticates with the stored token. The server and device need the same local network with mDNS/multicast available. No cloud login is used for these commands. Keep the token out of prompts and logs.
+Register the IPv4 address and 32-character hexadecimal token in `registrationData`. The Syncleo driver discovers the matching IPv4 address through `_syncleo._udp.local.` to obtain its UDP port and protocol metadata, then authenticates with the stored token. The server and device need the same local network with mDNS/multicast available. No cloud login is used for these commands. Keep the token out of prompts and logs.
 
 ### Commands
 
@@ -109,18 +109,18 @@ Only `power` is required in the parsed state. Other fields are included when rep
 
 ### Confirmation and limits
 
-- Each command opens a local connection and reads the initial state. Discovery has a 7-second timeout; the first power state has a 10-second timeout, followed by one second for optional fields. The Node driver limits the whole adapter process to 30 seconds.
+- Each command opens a local connection and reads the initial state. Discovery has a 7-second timeout; the first power state has a 10-second timeout, followed by one second for optional fields. The Node driver limits each session to 30 seconds and serializes sessions per IP.
 - An ordinary setting already equal to the current value is not sent again. A changed setting requires a new device update with the requested value within five seconds per step. A filter reset always needs a new acknowledgement, even if the initial counter is zero.
 - The TypeScript handler also checks the returned value. Mode changes require power on; speed changes require the requested speed, manual mode and power on; temperature changes require the requested target and `heaterInstalled: true`.
 - A missing required setting produces `unsupported`. A missing heater produces `heater_missing`; an unknown heater flag produces `hardware_unknown`. A write without matching confirmation produces `not_confirmed`; it may still have affected the physical device. Connection failures produce `device_unreachable`.
 - There is no tool for automatic CO₂ control or a CO₂ target. There is no separate heater on/off switch, room-temperature target, night-mode speed, ambient-sound volume, direct backlight switch, custom turbo duration, schedule or prefilter reset in this integration. Do not substitute eco mode or whole-device power for heater control.
 
-Implementation sources: [command schemas and handlers](src/services/smart-home/devices/ballu-asp100.ts), [wire mappings and acknowledgements](src/services/smart-home/drivers/syncleo/ballu_protocol.py), [discovery and connection](src/services/smart-home/drivers/syncleo/syncleo_adapter.py). The adapter pins `pysyncleo==0.4.1` and `zeroconf==0.154.0`.
+Implementation sources: [command schemas and handlers](src/services/smart-home/devices/ballu-asp100.ts), [wire mappings and acknowledgements](src/services/smart-home/profiles/ballu-asp100.ts), [discovery and connection](src/services/smart-home/drivers/syncleo/command.ts). The in-process driver discovers Syncleo v2 devices with bonjour-service and implements UDP sessions using Node.js crypto and dgram. The v2 framing is based on [homebridge-ballu-syncleo](https://github.com/toxaivanov/homebridge-ballu-syncleo) ([MIT license](src/services/smart-home/drivers/syncleo/LICENSE)).
 
 ## Verification
 
 - Read-only checks passed on the registered Smartmi VA4 (`1.4.6_1014`) and Deerma JSQ2G (`2.2.2`). All 18 humidifier properties answered successfully.
 - Read-only checks passed on Qingping CGD1ST (`2.1.7_0481`) after correcting its stored IP. All 27 measurement, battery and setting properties answered successfully. The separate MAC property was not requested.
-- The Node.js miIO driver and previous Python adapter returned matching property names and types on the registered Smartmi VA4 (15 fields), Deerma JSQ2G (18) and Qingping CGD1ST (17).
+- The Node.js miIO driver returned 15 state fields on the registered Smartmi VA4, 18 on the Deerma JSQ2G and 17 on the Qingping CGD1ST.
 - No physical setting was changed or filter counter reset. Protocol writes and readback failures are tested with simulated devices in `test/miio.test.ts`; tool schemas and handlers are tested in `test/xiaomi-commands.test.ts`.
-- Ballu wire encoding, unsupported inputs, hardware checks and fresh acknowledgements are covered by [`test/test_ballu.py`](test/test_ballu.py). Tool validation, model matching, returned-state checks, error reporting and CO₂ omission are covered by [`test/ballu-commands.test.ts`](test/ballu-commands.test.ts). This documentation update used the implementation and these test cases; it did not run new commands on physical Ballu devices.
+- Ballu wire encoding, unsupported inputs, hardware checks and fresh acknowledgements are covered by [`test/syncleo.test.ts`](test/syncleo.test.ts). Tool validation, model matching, returned-state checks, error reporting and CO₂ omission are covered by [`test/ballu-commands.test.ts`](test/ballu-commands.test.ts). The Syncleo v2 driver read 13 state fields from a registered ASP-100. Physical settings were left unchanged.

@@ -10,7 +10,7 @@ const DATABASE_MODULE = new URL('../src/services/database/index.ts', import.meta
 const LLM_MODULE = new URL('../src/services/llm/index.ts', import.meta.url);
 const MIIO_MODULE = new URL('../src/services/smart-home/drivers/miio/exchange.ts', import.meta.url);
 const SYNCLEO_MODULE = new URL(
-  '../src/services/smart-home/drivers/syncleo/adapter.ts',
+  '../src/services/smart-home/profiles/ballu-asp100.ts',
   import.meta.url,
 );
 
@@ -56,7 +56,7 @@ mock.module(MIIO_MODULE, {
 });
 mock.module(SYNCLEO_MODULE, {
   cache: true,
-  namedExports: { invokeAdapter: invokeSyncleo },
+  namedExports: { exchangeBallu: invokeSyncleo },
 });
 mock.module(STT_MODULE, {
   cache: true,
@@ -119,17 +119,14 @@ function exchangeMiio(
 ) {
   return runCommand({ model, transport: 'miio', registrationData, operation, parameters });
 }
-function invokeSyncleo(request: {
-  operation: string;
-  credentials: unknown;
-  args: Record<string, unknown>;
-}) {
+function invokeSyncleo(credentials: unknown, command: { name: string } & Record<string, unknown>) {
+  const { name, ...parameters } = command;
   return runCommand({
     model: DeviceModelCode.BalluAsp100,
     transport: 'syncleo',
-    registrationData: request.credentials,
-    operation: request.operation,
-    parameters: request.args,
+    registrationData: credentials,
+    operation: name,
+    parameters,
   });
 }
 function runCommand(command: DeviceCommand) {
