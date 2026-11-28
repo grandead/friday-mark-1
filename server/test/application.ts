@@ -18,7 +18,18 @@ export async function buildApp(options: Options) {
   function dispatch(request: Request) {
     return withRouteResources(options, async () => {
       const path = new URL(request.url).pathname;
+      const devicePath = /^\/api\/smart-home\/devices\/([^/]+)$/.exec(path);
+      const method = request.method;
+      if (devicePath && (method === 'GET' || method === 'PATCH' || method === 'DELETE')) {
+        const params = Promise.resolve({ deviceId: devicePath[1] });
+        return routes.deviceSettings[method](request, { params });
+      }
       if (request.method === 'POST') {
+        const command = /^\/api\/smart-home\/devices\/([^/]+)\/commands\/([^/]+)$/.exec(path);
+        if (command) {
+          const params = Promise.resolve({ deviceId: command[1], deviceCommand: command[2] });
+          return routes.deviceCommand(request, { params });
+        }
         if (path === '/api/smart-home/homes') return routes.createHome(request);
         if (path === '/api/smart-home/rooms') return routes.createRoom(request);
         if (path === '/api/smart-home/devices') return routes.createDevice(request);

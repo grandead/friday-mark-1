@@ -10,6 +10,8 @@ export const ERROR_MESSAGES = {
   device_rejected_command: 'The device rejected the command.',
   device_unreachable: 'Failed to obtain a response from the device.',
   invalid_device_command: 'Invalid device command arguments.',
+  invalid_device_settings: 'Invalid device name, IPv4 address, token or identifier.',
+  device_not_found: 'The device was not found.',
   device_model_mismatch: 'The command belongs to another device model.',
   invalid_device_state: 'The device returned an invalid state.',
   invalid_miio_registration: 'Expected a valid IPv4 address and a 32-character hexadecimal token.',

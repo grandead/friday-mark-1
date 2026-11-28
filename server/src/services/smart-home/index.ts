@@ -1,6 +1,4 @@
-import type { Models } from '../database';
-
-export type DeviceModelCode = Models.public_HomeDeviceType['code'];
+export { DeviceModelCode } from '../../../shared/device-model-code';
 export * as balluAsp100 from './devices/ballu-asp100';
 export * as qingpingAirMonitorLite from './devices/qingping-air-monitor-lite';
 export * as smartHumidifier2 from './devices/smart-humidifier2';

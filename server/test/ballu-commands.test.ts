@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
+import { DeviceModelCode } from '../shared/device-model-code';
 import { DEVICE_ID as deviceId, USER_ID as userId } from '../src/config/identity';
 import type { BalluState } from '../src/services/smart-home/devices/ballu-asp100';
 import { DeviceCommandError } from '../src/services/smart-home/utils';
@@ -18,7 +19,7 @@ test('Ballu settings validate model, ranges, confirmation and safe capability fa
     rooms: (r) => r.create({ displayName: 'Спальня Артема' }),
   });
   const types = await db.orm.public.HomeDeviceType.all();
-  for (const code of ['ballu-oneair-asp-100', 'smartmi-fresh-air']) {
+  for (const code of [DeviceModelCode.BalluAsp100, DeviceModelCode.SmartmiFreshAir]) {
     await db.orm.public.HomeDevice.create({
       roomId: home.rooms[0].id,
       typeId: types.find((type) => type.code === code)!.id,

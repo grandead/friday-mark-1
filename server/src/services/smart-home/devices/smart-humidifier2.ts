@@ -1,6 +1,9 @@
 import { z } from 'zod';
+import { DeviceModelCode } from '../../../../shared/device-model-code';
 import { type DeviceCredentials, runCommand } from '../drivers/miio';
 import { confirm, parseState } from '../utils';
+
+const MODEL = DeviceModelCode.XiaomiSmartHumidifier2;
 
 export const GET_STATE_SCHEMA = z.strictObject({});
 
@@ -59,7 +62,7 @@ export async function getState(
   credentials: DeviceCredentials,
   args: z.infer<typeof GET_STATE_SCHEMA>,
 ): Promise<HumidifierState> {
-  const response = await runCommand('xiaomi-smart-humidifier-2.state', credentials, args);
+  const response = await runCommand(`${MODEL}.state`, credentials, args);
   return parseState(HUMIDIFIER_STATE, response);
 }
 
@@ -67,7 +70,7 @@ export async function setPower(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_POWER_SCHEMA>,
 ) {
-  const response = await runCommand('xiaomi-smart-humidifier-2.power', credentials, args);
+  const response = await runCommand(`${MODEL}.power`, credentials, args);
   const state = parseState(HUMIDIFIER_STATE, response);
   confirm(state.power === args.power);
   return state;
@@ -77,7 +80,7 @@ export async function setMode(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_MODE_SCHEMA>,
 ) {
-  const response = await runCommand('xiaomi-smart-humidifier-2.mode', credentials, args);
+  const response = await runCommand(`${MODEL}.mode`, credentials, args);
   const state = parseState(HUMIDIFIER_STATE, response);
   confirm(state.mode === args.mode);
   return state;
@@ -87,7 +90,7 @@ export async function setBuzzer(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_BUZZER_SCHEMA>,
 ) {
-  const response = await runCommand('xiaomi-smart-humidifier-2.buzzer', credentials, args);
+  const response = await runCommand(`${MODEL}.buzzer`, credentials, args);
   const state = parseState(HUMIDIFIER_STATE, response);
   confirm(state.buzzer === args.buzzer);
   return state;
@@ -97,11 +100,7 @@ export async function setConstantProtection(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_CONSTANT_PROTECTION_SCHEMA>,
 ) {
-  const response = await runCommand(
-    'xiaomi-smart-humidifier-2.constantProtection',
-    credentials,
-    args,
-  );
+  const response = await runCommand(`${MODEL}.constantProtection`, credentials, args);
   const state = parseState(HUMIDIFIER_STATE, response);
   confirm(state.constantProtection === args.constantProtection);
   return state;
@@ -111,7 +110,7 @@ export async function setIndicator(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_INDICATOR_SCHEMA>,
 ) {
-  const response = await runCommand('xiaomi-smart-humidifier-2.indicator', credentials, args);
+  const response = await runCommand(`${MODEL}.indicator`, credentials, args);
   const state = parseState(HUMIDIFIER_STATE, response);
   confirm(state.indicator === args.indicator);
   return state;
@@ -121,7 +120,7 @@ export async function setLevel(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_LEVEL_SCHEMA>,
 ) {
-  const response = await runCommand('xiaomi-smart-humidifier-2.level', credentials, args);
+  const response = await runCommand(`${MODEL}.level`, credentials, args);
   const state = parseState(HUMIDIFIER_STATE, response);
   confirm(state.level === args.level);
   return state;
@@ -131,11 +130,7 @@ export async function setOverwetProtection(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_OVERWET_PROTECTION_SCHEMA>,
 ) {
-  const response = await runCommand(
-    'xiaomi-smart-humidifier-2.overwetProtection',
-    credentials,
-    args,
-  );
+  const response = await runCommand(`${MODEL}.overwetProtection`, credentials, args);
   const state = parseState(HUMIDIFIER_STATE, response);
   confirm(state.overwetProtection === args.overwetProtection);
   return state;
@@ -145,7 +140,7 @@ export async function setTargetHumidity(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_TARGET_HUMIDITY_SCHEMA>,
 ) {
-  const response = await runCommand('xiaomi-smart-humidifier-2.targetHumidity', credentials, args);
+  const response = await runCommand(`${MODEL}.targetHumidity`, credentials, args);
   const state = parseState(HUMIDIFIER_STATE, response);
   confirm(state.targetHumidity === args.targetHumidity);
   return state;

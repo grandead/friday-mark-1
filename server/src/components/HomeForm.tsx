@@ -215,7 +215,7 @@ function renderType(item: DeviceType) {
     </SelectItem>
   );
 }
-function ConnectionFields({ type }: { type: DeviceType }) {
+export function ConnectionFields({ type, ip }: { type: DeviceType; ip?: string }) {
   const [visible, setVisible] = useState(false);
   return (
     <div className="connection-fields">
@@ -227,16 +227,21 @@ function ConnectionFields({ type }: { type: DeviceType }) {
           inputMode="decimal"
           autoComplete="off"
           placeholder="192.168.1.100"
+          defaultValue={ip}
           name="ip"
         />
       </Label>
       <Label className="form-field" htmlFor="device-token">
-        {type.registrationType === 'miioToken' ? 'Токен Xiaomi' : 'Токен Ballu'}
+        {ip !== undefined
+          ? 'Новый токен'
+          : type.registrationType === 'miioToken'
+            ? 'Токен Xiaomi'
+            : 'Токен Ballu'}
       </Label>
       <div className="secret-field">
         <Input
           id="device-token"
-          required
+          required={ip === undefined}
           type={visible ? 'text' : 'password'}
           autoComplete="off"
           spellCheck={false}
@@ -257,9 +262,11 @@ function ConnectionFields({ type }: { type: DeviceType }) {
         </Button>
       </div>
       <p className="field-hint" id="token-hint">
-        {type.registrationType === 'miioToken'
-          ? 'Локальный токен устройства из Xiaomi Cloud Tokens Extractor.'
-          : 'Локальный токен Ballu из 32 шестнадцатеричных символов.'}
+        {ip !== undefined
+          ? 'Оставьте поле пустым, чтобы сохранить текущий токен.'
+          : type.registrationType === 'miioToken'
+            ? 'Локальный токен устройства из Xiaomi Cloud Tokens Extractor.'
+            : 'Локальный токен Ballu из 32 шестнадцатеричных символов.'}
       </p>
       <p className="registration-note">
         Сохраним данные подключения. Связь с прибором на этом шаге не проверяется.

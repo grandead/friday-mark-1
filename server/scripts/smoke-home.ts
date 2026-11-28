@@ -2,6 +2,7 @@
 // No physical appliance is read or changed.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { DeviceModelCode } from '../shared/device-model-code';
 import { DEVICE_ID as deviceId, USER_ID as userId } from '../src/config/identity';
 import { generateResponse } from '../src/services/llm/generate-response';
 import { DeviceCommandError } from '../src/services/smart-home/utils';
@@ -19,8 +20,8 @@ try {
   const types = await db.orm.public.HomeDeviceType.select('id', 'code').all();
   const home = await db.orm.public.Home.select('id').create({ displayName: 'Квартирка' });
   for (const [roomName, models] of [
-    ['Родительская', ['smartmi-fresh-air', 'xiaomi-smart-humidifier-2']],
-    ['Спальня Артема', ['ballu-oneair-asp-100']],
+    ['Родительская', [DeviceModelCode.SmartmiFreshAir, DeviceModelCode.XiaomiSmartHumidifier2]],
+    ['Спальня Артема', [DeviceModelCode.BalluAsp100]],
   ] as const) {
     const room = await db.orm.public.Room.select('id').create({
       homeId: home.id,
@@ -43,12 +44,12 @@ try {
   let failHumidifier = false;
   const homeTools = createHomeTools(db, async (command) => {
     calls.push(command);
-    if (failHumidifier && command.model === 'xiaomi-smart-humidifier-2')
+    if (failHumidifier && command.model === DeviceModelCode.XiaomiSmartHumidifier2)
       throw new DeviceCommandError('device_unreachable');
     return {
       power: command.parameters.power ?? true,
       humidity: 45,
-      ...(command.model === 'ballu-oneair-asp-100'
+      ...(command.model === DeviceModelCode.BalluAsp100
         ? {
             mode: command.parameters.mode ?? 'manual',
             speed: command.parameters.speed ?? 1,
@@ -66,9 +67,13 @@ try {
   });
   const assistant = createAssistant(db, generateResponse, homeTools);
   const cases: Array<[string, string | undefined, boolean | undefined]> = [
-    ['Включи бризер в родительской', 'smartmi-fresh-air', true],
-    ['Выключи бризер в спальне Артёма', 'ballu-oneair-asp-100', false],
-    ['Какое состояние увлажнителя в родительской?', 'xiaomi-smart-humidifier-2', undefined],
+    ['Включи бризер в родительской', DeviceModelCode.SmartmiFreshAir, true],
+    ['Выключи бризер в спальне Артёма', DeviceModelCode.BalluAsp100, false],
+    [
+      'Какое состояние увлажнителя в родительской?',
+      DeviceModelCode.XiaomiSmartHumidifier2,
+      undefined,
+    ],
     ['Включи бризер', undefined, undefined],
     ['Не включай увлажнитель', undefined, undefined],
     ['Установи целевую температуру бризера в родительской на 23 градуса', undefined, undefined],
@@ -109,7 +114,10 @@ try {
         calls: commands,
       });
       const models = calls.map((c) => c.model).sort();
-      assert.deepEqual(models, ['smartmi-fresh-air', 'xiaomi-smart-humidifier-2']);
+      assert.deepEqual(models, [
+        DeviceModelCode.SmartmiFreshAir,
+        DeviceModelCode.XiaomiSmartHumidifier2,
+      ]);
       const matched = calls.every((c) => c.operation === operation && c.parameters.power === power);
       assert.ok(matched);
     }
@@ -160,7 +168,7 @@ try {
     const operations = calls.map((c) => c.operation);
     printResult({ transcript, reply, operations });
     assert.equal(calls.length, 1);
-    assert.equal(calls[0].model, 'ballu-oneair-asp-100');
+    assert.equal(calls[0].model, DeviceModelCode.BalluAsp100);
     assert.equal(calls[0].operation, operation);
     assert.equal(field === 'operation' ? calls[0].operation : calls[0].parameters[field], expected);
   }
@@ -226,7 +234,7 @@ try {
     calls: answerCalls,
   });
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].model, 'ballu-oneair-asp-100');
+  assert.equal(calls[0].model, DeviceModelCode.BalluAsp100);
   assert.equal(calls[0].parameters.power, true);
 } finally {
   await database.close();

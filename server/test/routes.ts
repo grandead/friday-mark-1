@@ -11,6 +11,10 @@ export const routes = {
   homes: (await import('../src/app/api/smart-home/route')).GET,
   createHome: (await import('../src/app/api/smart-home/homes/route')).POST,
   createRoom: (await import('../src/app/api/smart-home/rooms/route')).POST,
+  deviceSettings: await import('../src/app/api/smart-home/devices/[deviceId]/route'),
+  deviceCommand: (
+    await import('../src/app/api/smart-home/devices/[deviceId]/commands/[deviceCommand]/route')
+  ).POST,
   createDevice: (await import('../src/app/api/smart-home/devices/route')).POST,
 };
 

@@ -1,11 +1,22 @@
 'use client';
-import { ChevronRight, DoorOpen, Droplets, House, Plus, Radio, Wind } from 'lucide-react';
+import {
+  ChevronRight,
+  DoorOpen,
+  Droplets,
+  House,
+  Pencil,
+  Plus,
+  Radio,
+  Trash2,
+  Wind,
+} from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { userError } from '../../lib/errors';
 import {
+  DeviceModelCode,
   type DeviceType,
   type Home,
   type HomeDevice,
@@ -13,7 +24,12 @@ import {
   type Room,
   type SmartHomeData,
 } from '../../lib/smart-home';
+import { AirMonitorReadings } from '../AirMonitorReadings';
+import { BalluControls } from '../BalluControls';
+import { type DeviceAction, DeviceSettingsDialog } from '../DeviceSettingsDialog';
 import { type CreatedHomeEntity, HomeForm, type HomeFormTarget } from '../HomeForm';
+import { HumidifierControls } from '../HumidifierControls';
+import { SmartmiControls } from '../SmartmiControls';
 
 function countLabel(count: number, words: [string, string, string]) {
   const end = count % 10,
@@ -30,6 +46,8 @@ export function SmartHome() {
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [target, setTarget] = useState<HomeFormTarget | null>(null);
+  const [editing, setEditing] = useState<DeviceAction | null>(null);
+  const editType = data?.deviceTypes.find((type) => type.id === editing?.device.typeId);
   const [message, setMessage] = useState('');
   // biome-ignore lint/correctness/useExhaustiveDependencies: Retry explicitly reloads the catalogue.
   useEffect(() => loadHomes(setData, setError), [retry]);
@@ -37,7 +55,7 @@ export function SmartHome() {
   const select = (id: string) => selectHome(router, id);
   const saved = (entity: CreatedHomeEntity) => saveEntity(entity, setData, select, setMessage);
   const types = data?.deviceTypes ?? [];
-  const card = (room: Room) => renderRoom(room, types, setTarget);
+  const card = (room: Room) => renderRoom(room, types, setTarget, setEditing);
   const choice = (item: Home) => renderChoice(item, item.id === home?.id, select);
   const devices = home?.rooms.reduce((total, room) => total + room.devices.length, 0) ?? 0;
   return (
@@ -144,6 +162,15 @@ export function SmartHome() {
           </section>
         </div>
       )}
+      {editing && editType && (
+        <DeviceSettingsDialog
+          device={editing.device}
+          action={editing.action}
+          type={editType}
+          onClose={() => setEditing(null)}
+          onChanged={(text) => finishEdit(text, setMessage, setEditing, setRetry)}
+        />
+      )}
       {target && data && (
         <HomeForm
           target={target}
@@ -154,6 +181,17 @@ export function SmartHome() {
       )}
     </main>
   );
+}
+
+function finishEdit(
+  text: string,
+  setMessage: (message: string) => void,
+  setEditing: (device: null) => void,
+  setRetry: React.Dispatch<React.SetStateAction<number>>,
+) {
+  setMessage(text);
+  setEditing(null);
+  setRetry((previous) => previous + 1);
 }
 
 function renderChoice(item: Home, selected: boolean, select: (id: string) => void) {
@@ -174,8 +212,13 @@ function renderChoice(item: Home, selected: boolean, select: (id: string) => voi
     </Button>
   );
 }
-function renderRoom(room: Room, types: DeviceType[], setTarget: (target: HomeFormTarget) => void) {
-  const item = (device: HomeDevice) => renderDevice(device, types);
+function renderRoom(
+  room: Room,
+  types: DeviceType[],
+  setTarget: (target: HomeFormTarget) => void,
+  edit: (selection: DeviceAction) => void,
+) {
+  const item = (device: HomeDevice) => renderDevice(device, types, edit);
   return (
     <Card key={room.id} className="panel room-card" aria-label={`Комната ${room.displayName}`}>
       <div className="room-heading">
@@ -212,11 +255,22 @@ function renderRoom(room: Room, types: DeviceType[], setTarget: (target: HomeFor
     </Card>
   );
 }
-function renderDevice(device: HomeDevice, types: DeviceType[]) {
+function renderDevice(
+  device: HomeDevice,
+  types: DeviceType[],
+  edit: (selection: DeviceAction) => void,
+) {
   const type = types.find((item) => item.id === device.typeId);
+  const isAirMonitor = type?.code === DeviceModelCode.QingpingAirMonitorLite;
+  const isSmartmi = type?.code === DeviceModelCode.SmartmiFreshAir;
+  const isBallu = type?.code === DeviceModelCode.BalluAsp100;
+  const isHumidifier = type?.code === DeviceModelCode.XiaomiSmartHumidifier2;
   const Icon = type?.kind === 'humidifier' ? Droplets : type?.kind === 'breezer' ? Wind : Radio;
   return (
-    <li key={device.id}>
+    <li
+      key={device.id}
+      className={isAirMonitor || isHumidifier || isBallu || isSmartmi ? 'has-readings' : undefined}
+    >
       <span className="device-icon">
         <Icon size={20} />
       </span>
@@ -224,6 +278,30 @@ function renderDevice(device: HomeDevice, types: DeviceType[]) {
         <strong>{device.displayName}</strong>
         <p>{type?.displayName ?? 'Устройство'}</p>
       </div>
+      <div className="device-actions">
+        <Button
+          type="button"
+          className="icon-button"
+          aria-label={`Редактировать ${device.displayName}`}
+          title="Редактировать устройство"
+          onClick={() => edit({ device, action: 'edit' })}
+        >
+          <Pencil size={15} />
+        </Button>
+        <Button
+          type="button"
+          className="icon-button delete-device"
+          aria-label={`Удалить ${device.displayName}`}
+          title="Удалить устройство"
+          onClick={() => edit({ device, action: 'delete' })}
+        >
+          <Trash2 size={15} />
+        </Button>
+      </div>
+      {isAirMonitor && <AirMonitorReadings deviceId={device.id} />}
+      {isSmartmi && <SmartmiControls deviceId={device.id} />}
+      {isBallu && <BalluControls deviceId={device.id} />}
+      {isHumidifier && <HumidifierControls deviceId={device.id} />}
     </li>
   );
 }

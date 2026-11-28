@@ -1,4 +1,4 @@
-import { qingpingAirMonitorLite } from '../../../smart-home';
+import { DeviceModelCode, qingpingAirMonitorLite } from '../../../smart-home';
 
 const CHARGING_NAMES: Record<number, string> = {
   0: 'без внешнего питания',
@@ -8,7 +8,7 @@ const CHARGING_NAMES: Record<number, string> = {
 };
 
 export const QINGPING_AIR_MONITOR_LITE = {
-  code: 'qingping-air-monitor-lite',
+  code: DeviceModelCode.QingpingAirMonitorLite,
   tools: [
     {
       name: 'qingping_get_state',

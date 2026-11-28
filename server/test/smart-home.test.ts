@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { v7, version } from 'uuid';
+import { DeviceModelCode } from '../shared/device-model-code';
 import type { createDevice } from '../src/app/api/smart-home/devices/_data/create-device';
 import { parseDeviceRegistration } from '../src/app/api/smart-home/devices/_lib/device-registration';
 import type { Database } from '../src/services/database';
@@ -31,10 +32,10 @@ test('smart home migration seeds the model catalogue and keeps homes isolated', 
   assert.deepEqual(
     types.map((type) => [type.code, type.kind, type.registrationType]),
     [
-      ['ballu-oneair-asp-100', 'breezer', 'syncleoToken'],
-      ['qingping-air-monitor-lite', 'airMonitor', 'miioToken'],
-      ['smartmi-fresh-air', 'breezer', 'miioToken'],
-      ['xiaomi-smart-humidifier-2', 'humidifier', 'miioToken'],
+      [DeviceModelCode.BalluAsp100, 'breezer', 'syncleoToken'],
+      [DeviceModelCode.QingpingAirMonitorLite, 'airMonitor', 'miioToken'],
+      [DeviceModelCode.SmartmiFreshAir, 'breezer', 'miioToken'],
+      [DeviceModelCode.XiaomiSmartHumidifier2, 'humidifier', 'miioToken'],
     ],
   );
   assert.ok(types.every((type) => version(type.id) === 7));

@@ -2,15 +2,16 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import test, { mock } from 'node:test';
 import { MiioPacket } from '@martyndevries/xiaomi-miio';
+import { DeviceModelCode } from '../shared/device-model-code';
 import { ERROR_MESSAGES } from '../shared/errors';
 
 const TOKEN = Buffer.alloc(16, 7);
 const TOKEN_HEX = TOKEN.toString('hex');
 const IP = '127.0.0.1';
 const MODELS = {
-  humidifier: 'xiaomi-smart-humidifier-2',
-  monitor: 'qingping-air-monitor-lite',
-  smartmi: 'smartmi-fresh-air',
+  humidifier: DeviceModelCode.XiaomiSmartHumidifier2,
+  monitor: DeviceModelCode.QingpingAirMonitorLite,
+  smartmi: DeviceModelCode.SmartmiFreshAir,
 };
 const HARDWARE = {
   humidifier: 'deerma.humidifier.jsq2g',

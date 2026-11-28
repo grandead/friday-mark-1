@@ -30,7 +30,7 @@
     "lint:staged": "lint-staged",
     "prepare": "cd .. && husky server/.husky",
     "build": "next build",
-    "db:emit": "prisma contract emit",
+    "db:emit": "prisma contract emit && node scripts/emit-device-model-code.ts",
     "stt:serve": "node --env-file-if-exists=.env --run stt:process",
     "stt:process": "bash scripts/start-whisper.sh"
   },

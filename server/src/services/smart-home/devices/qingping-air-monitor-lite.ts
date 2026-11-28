@@ -1,6 +1,9 @@
 import { z } from 'zod';
+import { DeviceModelCode } from '../../../../shared/device-model-code';
 import { type DeviceCredentials, runCommand } from '../drivers/miio';
 import { confirm, parseState } from '../utils';
+
+const MODEL = DeviceModelCode.QingpingAirMonitorLite;
 
 export const GET_STATE_SCHEMA = z.strictObject({});
 
@@ -66,7 +69,7 @@ export async function getState(
   credentials: DeviceCredentials,
   args: z.infer<typeof GET_STATE_SCHEMA>,
 ): Promise<QingpingState> {
-  const response = await runCommand('qingping-air-monitor-lite.state', credentials, args);
+  const response = await runCommand(`${MODEL}.state`, credentials, args);
   return parseState(QINGPING_STATE, response);
 }
 
@@ -74,11 +77,7 @@ export async function setAutoSlideInterval(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_AUTO_SLIDE_INTERVAL_SCHEMA>,
 ) {
-  const response = await runCommand(
-    'qingping-air-monitor-lite.autoSlideInterval',
-    credentials,
-    args,
-  );
+  const response = await runCommand(`${MODEL}.autoSlideInterval`, credentials, args);
   const state = parseState(QINGPING_STATE, response);
   confirm(state.autoSlideInterval === args.autoSlideInterval);
   return state;
@@ -88,11 +87,7 @@ export async function setMonitoringInterval(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_MONITORING_INTERVAL_SCHEMA>,
 ) {
-  const response = await runCommand(
-    'qingping-air-monitor-lite.monitoringInterval',
-    credentials,
-    args,
-  );
+  const response = await runCommand(`${MODEL}.monitoringInterval`, credentials, args);
   const state = parseState(QINGPING_STATE, response);
   confirm(state.monitoringInterval === args.monitoringInterval);
   return state;
@@ -102,7 +97,7 @@ export async function setPm25Standard(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_PM25_STANDARD_SCHEMA>,
 ) {
-  const response = await runCommand('qingping-air-monitor-lite.pm25Standard', credentials, args);
+  const response = await runCommand(`${MODEL}.pm25Standard`, credentials, args);
   const state = parseState(QINGPING_STATE, response);
   confirm(state.pm25Standard === args.pm25Standard);
   return state;
@@ -112,7 +107,7 @@ export async function setPowerOffDelay(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_POWER_OFF_DELAY_SCHEMA>,
 ) {
-  const response = await runCommand('qingping-air-monitor-lite.powerOffDelay', credentials, args);
+  const response = await runCommand(`${MODEL}.powerOffDelay`, credentials, args);
   const state = parseState(QINGPING_STATE, response);
   confirm(state.powerOffDelay === args.powerOffDelay);
   return state;
@@ -122,7 +117,7 @@ export async function setPowerOffSeconds(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_POWER_OFF_SECONDS_SCHEMA>,
 ) {
-  const response = await runCommand('qingping-air-monitor-lite.powerOffSeconds', credentials, args);
+  const response = await runCommand(`${MODEL}.powerOffSeconds`, credentials, args);
   const state = parseState(QINGPING_STATE, response);
   confirm(state.powerOffSeconds === args.powerOffSeconds);
   return state;
@@ -132,7 +127,7 @@ export async function setScreenOffDelay(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_SCREEN_OFF_DELAY_SCHEMA>,
 ) {
-  const response = await runCommand('qingping-air-monitor-lite.screenOffDelay', credentials, args);
+  const response = await runCommand(`${MODEL}.screenOffDelay`, credentials, args);
   const state = parseState(QINGPING_STATE, response);
   confirm(state.screenOffDelay === args.screenOffDelay);
   return state;
@@ -142,11 +137,7 @@ export async function setScreensaverDelay(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_SCREENSAVER_DELAY_SCHEMA>,
 ) {
-  const response = await runCommand(
-    'qingping-air-monitor-lite.screensaverDelay',
-    credentials,
-    args,
-  );
+  const response = await runCommand(`${MODEL}.screensaverDelay`, credentials, args);
   const state = parseState(QINGPING_STATE, response);
   confirm(state.screensaverDelay === args.screensaverDelay);
   return state;
@@ -156,7 +147,7 @@ export async function setTemperatureUnit(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_TEMPERATURE_UNIT_SCHEMA>,
 ) {
-  const response = await runCommand('qingping-air-monitor-lite.temperatureUnit', credentials, args);
+  const response = await runCommand(`${MODEL}.temperatureUnit`, credentials, args);
   const state = parseState(QINGPING_STATE, response);
   confirm(state.temperatureUnit === args.temperatureUnit);
   return state;
@@ -166,7 +157,7 @@ export async function setTwelveHourClock(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_TWELVE_HOUR_CLOCK_SCHEMA>,
 ) {
-  const response = await runCommand('qingping-air-monitor-lite.twelveHourClock', credentials, args);
+  const response = await runCommand(`${MODEL}.twelveHourClock`, credentials, args);
   const state = parseState(QINGPING_STATE, response);
   confirm(state.twelveHourClock === args.twelveHourClock);
   return state;

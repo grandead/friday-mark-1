@@ -1,9 +1,10 @@
+import { DeviceModelCode } from '../shared/device-model-code';
 import { DEVICE_ID as deviceId, USER_ID as userId } from '../src/config/identity';
 import { type Database, db } from '../src/services/database';
 
 const DEVICE_MODELS = [
   {
-    code: 'xiaomi-smart-humidifier-2',
+    code: DeviceModelCode.XiaomiSmartHumidifier2,
     displayName: 'Xiaomi Smart Humidifier 2',
     vendor: 'Xiaomi',
     model: 'Smart Humidifier 2',
@@ -11,7 +12,7 @@ const DEVICE_MODELS = [
     registrationType: 'miioToken',
   },
   {
-    code: 'qingping-air-monitor-lite',
+    code: DeviceModelCode.QingpingAirMonitorLite,
     displayName: 'Qingping Air Monitor Lite',
     vendor: 'Qingping',
     model: 'Air Monitor Lite',
@@ -19,7 +20,7 @@ const DEVICE_MODELS = [
     registrationType: 'miioToken',
   },
   {
-    code: 'smartmi-fresh-air',
+    code: DeviceModelCode.SmartmiFreshAir,
     displayName: 'Xiaomi Smartmi Fresh Air',
     vendor: 'Smartmi',
     model: 'Fresh Air',
@@ -27,7 +28,7 @@ const DEVICE_MODELS = [
     registrationType: 'miioToken',
   },
   {
-    code: 'ballu-oneair-asp-100',
+    code: DeviceModelCode.BalluAsp100,
     displayName: 'Ballu ONEAIR ASP-100',
     vendor: 'Ballu',
     model: 'ONEAIR ASP-100',

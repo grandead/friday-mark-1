@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { smartHumidifier2 } from '../../../smart-home';
+import { DeviceModelCode, smartHumidifier2 } from '../../../smart-home';
 
 const MODE_NAMES = { manual: 'ручной', constantHumidity: 'поддержание влажности' };
 const FAULT_NAMES = {
@@ -9,7 +9,7 @@ const FAULT_NAMES = {
 };
 
 export const SMART_HUMIDIFIER_2 = {
-  code: 'xiaomi-smart-humidifier-2',
+  code: DeviceModelCode.XiaomiSmartHumidifier2,
   tools: [
     {
       name: 'xiaomi_humidifier_get_state',

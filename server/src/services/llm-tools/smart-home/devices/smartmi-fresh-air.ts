@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { smartmiFreshAir } from '../../../smart-home';
+import { DeviceModelCode, smartmiFreshAir } from '../../../smart-home';
 
 const MODE_NAMES = {
   auto: 'автоматический',
@@ -12,7 +12,7 @@ const MODE_NAMES = {
 const BRIGHTNESS_NAMES = { bright: 'яркий', dim: 'тусклый', off: 'выключен' };
 
 export const SMARTMI_FRESH_AIR = {
-  code: 'smartmi-fresh-air',
+  code: DeviceModelCode.SmartmiFreshAir,
   tools: [
     {
       name: 'smartmi_get_state',

@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { join } from 'node:path';
 import { mock } from 'node:test';
+import { DeviceModelCode } from '../shared/device-model-code';
 import * as paths from '../src/config/paths';
 import type { Database } from '../src/services/database';
 import type { GenerateResponse } from '../src/services/llm';
@@ -124,7 +125,7 @@ function invokeSyncleo(request: {
   args: Record<string, unknown>;
 }) {
   return runCommand({
-    model: 'ballu-oneair-asp-100',
+    model: DeviceModelCode.BalluAsp100,
     transport: 'syncleo',
     registrationData: request.credentials,
     operation: request.operation,

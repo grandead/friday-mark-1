@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { z } from 'zod';
+import { DeviceModelCode } from '../shared/device-model-code';
 import type { Database } from '../src/services/database';
 import { DeviceCommandError } from '../src/services/smart-home/utils';
 import { createHomeTools, runHomeOperation, DEVICE_TOOLS as TOOLS } from './home-tools';
@@ -101,7 +102,7 @@ function fixture() {
   const device = {
     id: DEVICE_ID,
     displayName: 'Бризер',
-    type: { code: 'smartmi-fresh-air' },
+    type: { code: DeviceModelCode.SmartmiFreshAir },
     room: { displayName: 'Комната' },
     registrationData: { ip: '192.168.1.2', token: 'stored-secret-token' },
   };

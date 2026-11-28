@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
+import { DeviceModelCode } from '../shared/device-model-code';
 import { DEVICE_ID as deviceId, USER_ID as userId } from '../src/config/identity';
 import type { ChatMessage, ToolCall, ToolDefinition } from '../src/services/llm';
 import { DeviceCommandError } from '../src/services/smart-home/utils';
@@ -19,7 +20,7 @@ test('assistant executes multiple device commands and reports verified partial o
   t.after(() => database.close());
   const db = database.db;
   const type = await db.orm.public.HomeDeviceType.firstOrThrow({
-    code: 'xiaomi-smart-humidifier-2',
+    code: DeviceModelCode.XiaomiSmartHumidifier2,
   });
   await db.orm.public.Home.create({
     displayName: 'Дом',
@@ -36,7 +37,7 @@ test('assistant executes multiple device commands and reports verified partial o
   });
   const room = await db.orm.public.Room.firstOrThrow();
   const breezerType = await db.orm.public.HomeDeviceType.firstOrThrow({
-    code: 'smartmi-fresh-air',
+    code: DeviceModelCode.SmartmiFreshAir,
   });
   await db.orm.public.HomeDevice.create({
     roomId: room.id,
@@ -105,8 +106,8 @@ test('assistant executes multiple device commands and reports verified partial o
   assert.deepEqual(
     requests.map((r) => [r.model, r.parameters.power]),
     [
-      ['smartmi-fresh-air', true],
-      ['xiaomi-smart-humidifier-2', false],
+      [DeviceModelCode.SmartmiFreshAir, true],
+      [DeviceModelCode.XiaomiSmartHumidifier2, false],
     ],
   );
   assert.match(both.reply, /Бризер.*включён.*Увлажнитель.*выключен/);
@@ -121,7 +122,7 @@ test('assistant executes multiple device commands and reports verified partial o
     batch.map((a) => a.operation),
     ['chat', 'smartmi_set_power', 'xiaomi_humidifier_set_power'],
   );
-  for (const failed of ['smartmi-fresh-air', 'xiaomi-smart-humidifier-2']) {
+  for (const failed of [DeviceModelCode.SmartmiFreshAir, DeviceModelCode.XiaomiSmartHumidifier2]) {
     failedModel = failed;
     requests.length = 0;
     const partial = await run();
@@ -129,7 +130,7 @@ test('assistant executes multiple device commands and reports verified partial o
     assert.match(partial.reply, /Не удалось получить ответ от прибора/);
     assert.match(
       partial.reply,
-      failed === 'smartmi-fresh-air' ? /Увлажнитель.*выключен/ : /Бризер.*включён/,
+      failed === DeviceModelCode.SmartmiFreshAir ? /Увлажнитель.*выключен/ : /Бризер.*включён/,
     );
     const recorded = await db.orm.public.InteractionAction.where({
       interactionId: partial.id,
@@ -172,7 +173,9 @@ async function checkDeviceIds(t: test.TestContext) {
   const db = database.db;
   const home = await db.orm.public.Home.create({ displayName: 'Квартира' });
   const room = await db.orm.public.Room.create({ homeId: home.id, displayName: 'Спальня' });
-  const type = await db.orm.public.HomeDeviceType.firstOrThrow({ code: 'smartmi-fresh-air' });
+  const type = await db.orm.public.HomeDeviceType.firstOrThrow({
+    code: DeviceModelCode.SmartmiFreshAir,
+  });
   const first = await db.orm.public.HomeDevice.create({
     roomId: room.id,
     typeId: type.id,

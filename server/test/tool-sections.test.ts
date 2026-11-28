@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test, { mock } from 'node:test';
 import { z } from 'zod';
+import { DeviceModelCode } from '../shared/device-model-code';
 import type { Database } from '../src/services/database';
 import type { ToolCall } from '../src/services/llm';
 import type { ToolOutcome, ToolSection } from '../src/services/llm-tools/registry';
@@ -104,7 +105,7 @@ async function readDevice() {
   return {
     id: DEVICE_ID,
     displayName: 'Бризер',
-    type: { code: 'smartmi-fresh-air' },
+    type: { code: DeviceModelCode.SmartmiFreshAir },
     room: { displayName: 'Комната' },
     registrationData: { token: 'private-token' },
   };

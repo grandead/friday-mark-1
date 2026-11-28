@@ -102,3 +102,69 @@ test('smart home API creates a nested tree and never returns connection credenti
     2,
   );
 });
+
+test('device settings update independently, protect credentials and delete only the selected device', async (t) => {
+  const database = await createTestDatabase();
+  const recordingsDir = await mkdtemp(join(tmpdir(), 'friday-settings-'));
+  const app = await buildApp({ db: database.db, recordingsDir });
+  t.after(async () => {
+    await app.close();
+    await database.close();
+    await rm(recordingsDir, { recursive: true, force: true });
+  });
+  const orm = database.db.orm.public;
+  const home = await orm.Home.select('id').create({ displayName: 'Home' });
+  const room = await orm.Room.select('id').create({ homeId: home.id, displayName: 'Room' });
+  const types = await orm.HomeDeviceType.select('id', 'registrationType').all();
+  const ip = '192.0.2.1';
+  const token = 'a'.repeat(32);
+  for (const type of types) {
+    const device = await orm.HomeDevice.select('id').create({
+      displayName: 'Прибор',
+      typeId: type.id,
+      roomId: room.id,
+      registrationData: { ip, token },
+    });
+    const url = `/api/smart-home/devices/${device.id}`;
+    const patch = (payload: unknown) => app.inject({ url, method: 'PATCH', payload });
+    assert.deepEqual((await app.inject(url)).json(), { displayName: 'Прибор', ip });
+    assert.equal((await patch({ displayName: '  Датчик  ' })).json().displayName, 'Датчик');
+    for (const invalid of [
+      {},
+      { ip: 'invalid' },
+      { token: '' },
+      { displayName: ' ' },
+      { typeId: type.id },
+    ]) {
+      assert.equal((await patch(invalid)).statusCode, 400);
+    }
+    if (type.registrationType === 'syncleoToken') {
+      assert.equal((await patch({ ip: '192.0.2.3', token: '0'.repeat(32) })).statusCode, 400);
+    }
+    assert.deepEqual((await app.inject(url)).json(), { displayName: 'Датчик', ip });
+    assert.equal((await patch({ ip: '192.0.2.7' })).statusCode, 200);
+    const unchanged = await orm.HomeDevice.select('registrationData').firstOrThrow({
+      id: device.id,
+    });
+    assert.deepEqual(unchanged.registrationData, { ip: '192.0.2.7', token });
+    const changed = await Promise.all([
+      patch({ ip: '192.0.2.8' }),
+      patch({ token: 'B'.repeat(32) }),
+    ]);
+    for (const response of changed) {
+      assert.equal(response.statusCode, 200, response.body);
+      assert.deepEqual(Object.keys(response.json()).sort(), [
+        'displayName',
+        'id',
+        'roomId',
+        'typeId',
+      ]);
+    }
+    const stored = await orm.HomeDevice.select('registrationData').firstOrThrow({ id: device.id });
+    assert.deepEqual(stored.registrationData, { ip: '192.0.2.8', token: 'b'.repeat(32) });
+    assert.equal((await app.inject({ url, method: 'DELETE' })).statusCode, 204);
+    assert.equal((await app.inject(url)).statusCode, 404);
+    assert.equal((await patch({ displayName: 'Датчик' })).statusCode, 404);
+    assert.equal((await app.inject({ url, method: 'DELETE' })).statusCode, 404);
+  }
+});

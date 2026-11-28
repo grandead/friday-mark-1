@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { balluAsp100 } from '../../../smart-home';
+import { balluAsp100, DeviceModelCode } from '../../../smart-home';
 
 const MODE_NAMES = {
   off: 'выключен',
@@ -19,7 +19,7 @@ const SOUND_NAMES = {
 };
 
 export const BALLU_ASP100 = {
-  code: 'ballu-oneair-asp-100',
+  code: DeviceModelCode.BalluAsp100,
   tools: [
     {
       name: 'ballu_get_state',

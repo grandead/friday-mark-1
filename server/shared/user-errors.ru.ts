@@ -13,6 +13,8 @@ export const USER_ERRORS: Record<ErrorCode, string> = {
   device_unreachable:
     'Не удалось получить ответ от прибора. Проверьте питание, сеть и данные подключения.',
   invalid_device_command: 'Некорректные параметры команды прибора.',
+  invalid_device_settings: 'Проверьте название, IPv4-адрес и токен устройства.',
+  device_not_found: 'Устройство не найдено.',
   device_model_mismatch: 'Эта команда недоступна для выбранной модели устройства.',
   invalid_device_state: 'Не удалось прочитать состояние прибора. Попробуйте ещё раз.',
   invalid_miio_registration:

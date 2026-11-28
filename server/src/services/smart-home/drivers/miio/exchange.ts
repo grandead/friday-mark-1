@@ -1,4 +1,5 @@
 import { setTimeout as delay } from 'node:timers/promises';
+import { DeviceModelCode } from '../../../../../shared/device-model-code';
 import { DeviceCommandError } from '../../utils';
 import type { DeviceCredentials } from './device-credentials';
 import { readMiot, writeMiot } from './miot';
@@ -6,17 +7,17 @@ import { MiioSession } from './session';
 import { readSmartmi, writeSmartmi } from './smartmi';
 
 const MODELS = {
-  'xiaomi-smart-humidifier-2': {
+  [DeviceModelCode.XiaomiSmartHumidifier2]: {
     hardware: ['deerma.humidifier.jsq2g'],
     read: readMiot,
     write: writeMiot,
   },
-  'smartmi-fresh-air': {
+  [DeviceModelCode.SmartmiFreshAir]: {
     hardware: ['zhimi.airfresh.va2', 'zhimi.airfresh.va4'],
     read: readSmartmi,
     write: writeSmartmi,
   },
-  'qingping-air-monitor-lite': {
+  [DeviceModelCode.QingpingAirMonitorLite]: {
     hardware: ['cgllc.airm.cgdn1', 'cgllc.airm.cgd1st'],
     read: readMiot,
     write: writeMiot,

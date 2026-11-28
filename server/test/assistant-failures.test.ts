@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { DeviceModelCode } from '../shared/device-model-code';
 import type { Database } from '../src/services/database';
 import type { ModelReply } from '../src/services/llm';
 import { withServiceResources } from './service-resources';
@@ -113,7 +114,7 @@ async function device() {
   return {
     id: DEVICE_ID,
     displayName: 'Бризер',
-    type: { code: 'smartmi-fresh-air' },
+    type: { code: DeviceModelCode.SmartmiFreshAir },
     room: { displayName: 'Комната' },
     registrationData: {},
   };

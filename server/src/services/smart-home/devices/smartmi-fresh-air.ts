@@ -1,6 +1,9 @@
 import { z } from 'zod';
+import { DeviceModelCode } from '../../../../shared/device-model-code';
 import { type DeviceCredentials, runCommand } from '../drivers/miio';
 import { confirm, parseState } from '../utils';
+
+const MODEL = DeviceModelCode.SmartmiFreshAir;
 
 export const GET_STATE_SCHEMA = z.strictObject({});
 
@@ -54,7 +57,7 @@ export async function getState(
   credentials: DeviceCredentials,
   args: z.infer<typeof GET_STATE_SCHEMA>,
 ): Promise<SmartmiState> {
-  const response = await runCommand('smartmi-fresh-air.state', credentials, args);
+  const response = await runCommand(`${MODEL}.state`, credentials, args);
   return parseState(SMARTMI_STATE, response);
 }
 
@@ -62,7 +65,7 @@ export async function setPower(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_POWER_SCHEMA>,
 ) {
-  const response = await runCommand('smartmi-fresh-air.power', credentials, args);
+  const response = await runCommand(`${MODEL}.power`, credentials, args);
   const state = parseState(SMARTMI_STATE, response);
   confirm(state.power === args.power);
   return state;
@@ -72,7 +75,7 @@ export async function setMode(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_MODE_SCHEMA>,
 ) {
-  const response = await runCommand('smartmi-fresh-air.mode', credentials, args);
+  const response = await runCommand(`${MODEL}.mode`, credentials, args);
   const state = parseState(SMARTMI_STATE, response);
   confirm(state.mode === args.mode);
   return state;
@@ -82,7 +85,7 @@ export async function setSpeed(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_SPEED_SCHEMA>,
 ) {
-  const response = await runCommand('smartmi-fresh-air.speed', credentials, args);
+  const response = await runCommand(`${MODEL}.speed`, credentials, args);
   const state = parseState(SMARTMI_STATE, response);
   confirm(state.speed === args.speed);
   return state;
@@ -92,7 +95,7 @@ export async function setBrightness(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_BRIGHTNESS_SCHEMA>,
 ) {
-  const response = await runCommand('smartmi-fresh-air.brightness', credentials, args);
+  const response = await runCommand(`${MODEL}.brightness`, credentials, args);
   const state = parseState(SMARTMI_STATE, response);
   confirm(state.brightness === args.brightness);
   return state;
@@ -102,7 +105,7 @@ export async function setBuzzer(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_BUZZER_SCHEMA>,
 ) {
-  const response = await runCommand('smartmi-fresh-air.buzzer', credentials, args);
+  const response = await runCommand(`${MODEL}.buzzer`, credentials, args);
   const state = parseState(SMARTMI_STATE, response);
   confirm(state.buzzer === args.buzzer);
   return state;
@@ -112,7 +115,7 @@ export async function setChildLock(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_CHILD_LOCK_SCHEMA>,
 ) {
-  const response = await runCommand('smartmi-fresh-air.childLock', credentials, args);
+  const response = await runCommand(`${MODEL}.childLock`, credentials, args);
   const state = parseState(SMARTMI_STATE, response);
   confirm(state.childLock === args.childLock);
   return state;
@@ -122,7 +125,7 @@ export async function setHeater(
   credentials: DeviceCredentials,
   args: z.infer<typeof SET_HEATER_SCHEMA>,
 ) {
-  const response = await runCommand('smartmi-fresh-air.heater', credentials, args);
+  const response = await runCommand(`${MODEL}.heater`, credentials, args);
   const state = parseState(SMARTMI_STATE, response);
   confirm(state.heater === args.heater);
   return state;
@@ -132,7 +135,7 @@ export async function resetFilter(
   credentials: DeviceCredentials,
   args: z.infer<typeof RESET_FILTER_SCHEMA>,
 ) {
-  const response = await runCommand('smartmi-fresh-air.resetFilter', credentials, args);
+  const response = await runCommand(`${MODEL}.resetFilter`, credentials, args);
   const state = parseState(SMARTMI_STATE, response);
   confirm(state.filterHours === 0);
   return state;
